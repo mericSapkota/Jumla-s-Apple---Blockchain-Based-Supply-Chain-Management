@@ -51,6 +51,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/batch/create").hasRole("FARMER")
                         .requestMatchers("/api/batch/certify/**").hasRole("COOPERATIVE")
                         .requestMatchers("/api/batch/transit/**").hasRole("TRANSPORTER")
+                        .requestMatchers("/api/batch/deliver/**").hasRole("TRANSPORTER")
+                        .requestMatchers("/api/batch/transit/**").hasRole("TRANSPORTER")
+                        .requestMatchers("/api/batch/ipfs/**").hasRole("FARMER")
+                        .requestMatchers("/api/batch/my/**").authenticated()
+                        .requestMatchers("/api/batch/status/**").authenticated()
 
                         .anyRequest().authenticated()
                 )
