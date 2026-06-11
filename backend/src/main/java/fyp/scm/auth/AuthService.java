@@ -34,10 +34,16 @@ public class AuthService {
     }
 
     public AuthResponse login(AuthRequest req) {
-        authManager.authenticate(
-                new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));
+        // Step 1 — find user first, throw custom message if not found
         User user = userRepository.findByEmail(req.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Step 2 — check password manually, throw custom message if wrong
+        if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
+            throw new RuntimeException("Invalid password");
+        }
+
+        // Step 3 — generate token
         String token = jwtUtil.generateToken(user);
         return new AuthResponse(token, user.getRole().name(), user.getFullName());
     }

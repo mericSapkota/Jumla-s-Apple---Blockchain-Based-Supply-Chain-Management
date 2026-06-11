@@ -6,7 +6,7 @@ import lombok.Data;
 
 // ─── Create Batch (Farmer) ────────────────────────────────────────────────────
 @Data
-class CreateBatchRequest {
+public class CreateBatchRequest {
 
     @NotBlank(message = "Farm location is required")
     private String farmLocation;
@@ -26,22 +26,6 @@ class CreateBatchRequest {
     private String photoPath;
 }
 
-// ─── Transit Update (Transporter) ────────────────────────────────────────────
-@Data
-class TransitUpdateRequest {
 
-    @NotBlank(message = "Current location is required")
-    private String location;      // e.g. "Nepalgunj"
-
-    private String destination;   // only needed on first transit call
-}
 
 // ─── Update IPFS Hash (Farmer / Backend after photo upload) ──────────────────
-@Data
-class IpfsUpdateRequest {
-
-    @NotBlank(message = "IPFS hash is required")
-    private String ipfsHash;
-
-    private String aiResult;
-}
