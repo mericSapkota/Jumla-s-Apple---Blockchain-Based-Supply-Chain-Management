@@ -60,7 +60,7 @@ public class BatchService {
 
         // Parse harvest date
         LocalDateTime harvestDate = LocalDateTime.parse(
-                req.getHarvestDate(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                req.getHarvestDate(), DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         BigInteger harvestTimestamp = BigInteger.valueOf(
                 harvestDate.toEpochSecond(ZoneOffset.UTC));
 

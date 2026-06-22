@@ -29,7 +29,7 @@ class GanacheIntegrationTest {
     // ── Config ────────────────────────────────────────────────────────────────
     // Ganache Account #0 private key — NO 0x prefix
     private static final String GANACHE_PRIVATE_KEY =
-            "0x92aabc58f92c3bfa8dc59f58c6cbfa256d0714ff4cfb3a24a8303a1b95817642";
+            "0xbf6c23721ae4763bdf5c897aa41e95a01a9334605ba08deee1bb5d81ca1c494a";
 
     private static final String GANACHE_URL = "http://127.0.0.1:7545";
 
