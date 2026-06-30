@@ -46,7 +46,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/batch/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/batch/qr/**").permitAll()
-
+                        .requestMatchers(HttpMethod.GET, "/api/blogs", "/api/blogs/*").permitAll()
                         // Role protected endpoints
                         .requestMatchers("/api/batch/create").hasRole("FARMER")
                         .requestMatchers("/api/batch/certify/**").hasRole("COOPERATIVE")
@@ -57,6 +57,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/batch/my/**").authenticated()
                         .requestMatchers("/api/batch/status/**").authenticated()
 
+                        .requestMatchers("/api/users/me", "/api/users/me/password").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/blogs/my").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/blogs").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/blogs/*").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/blogs/*").authenticated()
                         .anyRequest().authenticated()
                 )
 

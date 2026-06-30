@@ -27,8 +27,7 @@ public class BlogPost {
     @Column(length = 220)
     private String excerpt;
 
-    @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @Column(nullable = false)
