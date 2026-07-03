@@ -10,6 +10,7 @@ import Button from "../../components/ui/Button";
 import Icon from "../../components/ui/Icon";
 import { transitUpdateSchema } from "../../schemas/batchSchemas";
 import { getBatchesByStatus, updateTransit, deliverBatch } from "../../api/batchApi";
+import CertificateBanner from "../../components/certificate/CertificateBanner";
 
 function TransitForm({ batch, onUpdated }) {
   const {
@@ -34,21 +35,18 @@ function TransitForm({ batch, onUpdated }) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="bg-surface-container-low rounded-xl p-4 space-y-3 border border-outline-variant/10">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
-        Update logistics checkpoint
-      </p>
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="bg-surface-container-low rounded-xl p-4 space-y-3 border border-outline-variant/10"
+    >
+      <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Update logistics checkpoint</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
           placeholder="Current checkpoint (e.g. Nepalgunj)"
           error={errors.location?.message}
           {...register("location")}
         />
-        <Input
-          placeholder="Destination"
-          error={errors.destination?.message}
-          {...register("destination")}
-        />
+        <Input placeholder="Destination" error={errors.destination?.message} {...register("destination")} />
       </div>
       <Button type="submit" variant="accent" icon="token" loading={isSubmitting} className="w-full">
         Update on blockchain
@@ -99,11 +97,8 @@ export default function TransporterDashboard() {
   };
 
   return (
-    <DashboardShell
-      title="Jumla Trace"
-      eyebrow="Transporter Hub"
-      heading="Transit management"
-    >
+    <DashboardShell title="Jumla Trace" eyebrow="Transporter Hub" heading="Transit management">
+      <CertificateBanner />
       {loading ? (
         <div className="bg-surface-container-lowest rounded-3xl shadow-soft p-10 text-center text-on-surface-variant text-sm">
           Loading…

@@ -15,6 +15,7 @@ export default function AIFreshnessCheck({ onResult }) {
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState(null);
   const inputRef = useRef(null);
+  const [aiConfidence, setAiConfidence] = useState(0);
 
   const handleFileChange = (e) => {
     const selected = e.target.files?.[0];
@@ -28,8 +29,9 @@ export default function AIFreshnessCheck({ onResult }) {
     if (!file) return;
     setChecking(true);
     try {
-      const { result: aiResult } = await checkAppleFreshness(file);
+      const { raw, result: aiResult, confidence } = await checkAppleFreshness(file);
       setResult(aiResult);
+      setAiConfidence(confidence);
       onResult?.(aiResult);
       toast.success(`AI check complete: ${aiResult}`);
     } catch (err) {
@@ -95,11 +97,7 @@ export default function AIFreshnessCheck({ onResult }) {
               disabled={checking}
               className="flex-1 bg-primary text-on-primary font-bold py-3 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
             >
-              {checking ? (
-                <Icon name="progress_activity" className="animate-spin" />
-              ) : (
-                <Icon name="science" />
-              )}
+              {checking ? <Icon name="progress_activity" className="animate-spin" /> : <Icon name="science" />}
               {checking ? "Checking…" : "Run AI Check"}
             </button>
 
@@ -110,7 +108,7 @@ export default function AIFreshnessCheck({ onResult }) {
                 }`}
               >
                 <Icon name="check_circle" filled size="16px" />
-                {result}
+                {result} {aiConfidence ? `(${aiConfidence.toFixed(1)}% confidence)` : ""}
               </div>
             )}
           </div>

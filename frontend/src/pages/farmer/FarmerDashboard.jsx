@@ -13,6 +13,7 @@ import QRDisplay from "../../components/batch/QRDisplay";
 import { createBatchSchema, APPLE_VARIETIES } from "../../schemas/batchSchemas";
 import { createBatch } from "../../api/batchApi";
 import { useAuth } from "../../auth/AuthContext";
+import CertificateBanner from "../../components/certificate/CertificateBanner";
 
 export default function FarmerDashboard() {
   const { user } = useAuth();
@@ -45,11 +46,8 @@ export default function FarmerDashboard() {
   };
 
   return (
-    <DashboardShell
-      title="Jumla Trace"
-      eyebrow="Farmer Hub"
-      heading={`Good day, ${user?.fullName || "Farmer"} 👋`}
-    >
+    <DashboardShell title="Jumla Trace" eyebrow="Farmer Hub" heading={`Good day, ${user?.fullName || "Farmer"} 👋`}>
+      <CertificateBanner />
       {/* Create batch form */}
       <section className="bg-surface-container-lowest rounded-3xl shadow-soft overflow-hidden relative">
         <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
@@ -59,12 +57,7 @@ export default function FarmerDashboard() {
           <h3 className="font-headline text-xl font-bold text-primary">Create new batch</h3>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            <Input
-              label="Harvest date"
-              type="date"
-              error={errors.harvestDate?.message}
-              {...register("harvestDate")}
-            />
+            <Input label="Harvest date" type="date" error={errors.harvestDate?.message} {...register("harvestDate")} />
 
             <div className="grid grid-cols-2 gap-4">
               <Input
@@ -94,12 +87,7 @@ export default function FarmerDashboard() {
 
             <AIFreshnessCheck onResult={(result) => setValue("aiResult", result)} />
 
-            <Button
-              type="submit"
-              loading={isSubmitting}
-              icon="hub"
-              className="w-full py-4"
-            >
+            <Button type="submit" loading={isSubmitting} icon="hub" className="w-full py-4">
               Register batch on blockchain
             </Button>
           </form>
@@ -115,9 +103,7 @@ export default function FarmerDashboard() {
               Print &amp; attach to crate
             </p>
             <p className="font-headline text-lg font-bold text-primary">#{selectedBatch.batchId}</p>
-            <p className="text-xs text-on-surface-variant">
-              Consumers scan this to see the full journey.
-            </p>
+            <p className="text-xs text-on-surface-variant">Consumers scan this to see the full journey.</p>
           </div>
         </section>
       )}

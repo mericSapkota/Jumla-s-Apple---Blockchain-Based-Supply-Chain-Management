@@ -40,8 +40,8 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
-  const register = useCallback(async (payload) => {
-    const data = await registerUser(payload);
+  const register = useCallback(async (payload, profilePictureFile = null) => {
+    const data = await registerUser(payload, profilePictureFile);
     persist(data);
     return data;
   }, []);

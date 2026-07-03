@@ -6,6 +6,7 @@ import BatchTable from "../../components/batch/BatchTable";
 import Button from "../../components/ui/Button";
 import Icon from "../../components/ui/Icon";
 import { getBatchesByStatus, certifyBatch } from "../../api/batchApi";
+import CertificateBanner from "../../components/certificate/CertificateBanner";
 
 export default function CooperativeDashboard() {
   const [batches, setBatches] = useState([]);
@@ -42,11 +43,8 @@ export default function CooperativeDashboard() {
   };
 
   return (
-    <DashboardShell
-      title="Jumla Trace"
-      eyebrow="Cooperative Hub"
-      heading="Pending certifications"
-    >
+    <DashboardShell title="Jumla Trace" eyebrow="Cooperative Hub" heading="Pending certifications">
+      <CertificateBanner />
       {loading ? (
         <div className="bg-surface-container-lowest rounded-3xl shadow-soft p-10 text-center text-on-surface-variant text-sm">
           Loading…
