@@ -92,6 +92,11 @@
 			<version>4.12.0</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>3.0.5</version>
+		</dependency>
 		<!-- Code generation runtime (required for the generated wrapper class) -->
 		<dependency>
 			<groupId>org.web3j</groupId>

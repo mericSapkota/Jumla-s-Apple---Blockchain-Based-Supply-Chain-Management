@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Data
 @Builder
 @AllArgsConstructor
@@ -14,5 +16,7 @@ public class UserResponse {
     private String email;
     private String fullName;
     private String role;
+    private LocalDate dateOfBirth;
+    private String profilePicturePath; // relative path only, e.g. "/uploads/profiles/abc.jpg"
     private String token; // only populated when a new token was issued (email change)
 }

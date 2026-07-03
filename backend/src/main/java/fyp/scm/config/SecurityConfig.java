@@ -57,7 +57,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/batch/my/**").authenticated()
                         .requestMatchers("/api/batch/status/**").authenticated()
 
-                        .requestMatchers("/api/users/me", "/api/users/me/password").authenticated()
+                        .requestMatchers("/api/users/me", "/api/users/me/password", "/api/users/me/photo").authenticated()
+                        .requestMatchers("/api/certificate/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/blogs/my").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/blogs").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/blogs/*").authenticated()

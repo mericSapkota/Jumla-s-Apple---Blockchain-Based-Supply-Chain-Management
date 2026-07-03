@@ -9,6 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 
@@ -35,6 +36,14 @@ public class User implements UserDetails {
 
     @Enumerated(EnumType.STRING)
     private Role role;
+
+    @Column(nullable = false)
+    private LocalDate dateOfBirth;
+
+    // Relative path only, e.g. "/uploads/profiles/<uuid>.jpg".
+    // The actual image file lives on the FRONTEND, not the backend —
+    // see FileStorageService for where it is physically written.
+    private String profilePicturePath;
 
     // ── UserDetails impl ──────────────────────────
     @Override

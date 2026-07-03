@@ -2,6 +2,8 @@ package fyp.scm.batch;
 
 
 
+import fyp.scm.certificate.BlockchainTransactionLog;
+import fyp.scm.certificate.BlockchainTransactionLogRepository;
 import fyp.scm.contract.AppleBatch;
 import fyp.scm.user.User;
 import fyp.scm.user.UserRepository;
@@ -35,6 +37,7 @@ public class BatchService {
     private final ContractGasProvider gasProvider;
     private final BatchRepository batchRepository;
     private final UserRepository userRepository;
+    private final BlockchainTransactionLogRepository transactionLogRepository;
 
     @Value("${web3j.contract-address}")
     private String contractAddress;
@@ -101,6 +104,9 @@ public class BatchService {
 
             batchRepository.save(entity);
 
+            logTransaction(farmerEmail, farmer.getRole().name(), batchId,
+                    BlockchainTransactionLog.TransactionType.CREATE_BATCH, receipt.getTransactionHash());
+
             return mapToResponse(entity, null);
 
         } catch (Exception e) {
@@ -113,7 +119,7 @@ public class BatchService {
     //  COOPERATIVE — Certify Batch
     // ─────────────────────────────────────────────────────────────────────────
     @Transactional
-    public BatchResponse certifyBatch(String batchId) {
+    public BatchResponse certifyBatch(String batchId, String cooperativeEmail) {
         BatchEntity entity = getBatchEntityOrThrow(batchId);
 
         if (entity.getStatus() != BatchStatus.HARVESTED) {
@@ -130,6 +136,9 @@ public class BatchService {
             entity.setTxHashCertify(receipt.getTransactionHash());
             batchRepository.save(entity);
 
+            logTransaction(cooperativeEmail, "COOPERATIVE", batchId,
+                    BlockchainTransactionLog.TransactionType.CERTIFY_BATCH, receipt.getTransactionHash());
+
             return mapToResponse(entity, null);
 
         } catch (Exception e) {
@@ -142,7 +151,7 @@ public class BatchService {
     //  TRANSPORTER — Update Transit
     // ─────────────────────────────────────────────────────────────────────────
     @Transactional
-    public BatchResponse updateTransit(String batchId, TransitUpdateRequest req) {
+    public BatchResponse updateTransit(String batchId, TransitUpdateRequest req, String transporterEmail) {
         BatchEntity entity = getBatchEntityOrThrow(batchId);
 
         if (entity.getStatus() != BatchStatus.CERTIFIED &&
@@ -170,6 +179,10 @@ public class BatchService {
             }
 
             batchRepository.save(entity);
+
+            logTransaction(transporterEmail, "TRANSPORTER", batchId,
+                    BlockchainTransactionLog.TransactionType.UPDATE_TRANSIT, receipt.getTransactionHash());
+
             return mapToResponse(entity, null);
 
         } catch (Exception e) {
@@ -182,7 +195,7 @@ public class BatchService {
     //  TRANSPORTER — Deliver Batch
     // ─────────────────────────────────────────────────────────────────────────
     @Transactional
-    public BatchResponse deliverBatch(String batchId) {
+    public BatchResponse deliverBatch(String batchId, String transporterEmail) {
         BatchEntity entity = getBatchEntityOrThrow(batchId);
 
         if (entity.getStatus() != BatchStatus.IN_TRANSIT) {
@@ -198,6 +211,9 @@ public class BatchService {
             entity.setStatus(BatchStatus.DELIVERED);
             entity.setTxHashDeliver(receipt.getTransactionHash());
             batchRepository.save(entity);
+
+            logTransaction(transporterEmail, "TRANSPORTER", batchId,
+                    BlockchainTransactionLog.TransactionType.DELIVER_BATCH, receipt.getTransactionHash());
 
             return mapToResponse(entity, null);
 
@@ -339,5 +355,22 @@ public class BatchService {
             candidate = "JML-" + year + "-" + suffix;
         }
         return candidate;
+    }
+
+    /** Persists a confirmed blockchain transaction for certificate eligibility tracking. */
+    private void logTransaction(String userEmail, String role, String batchId,
+                                BlockchainTransactionLog.TransactionType type, String txHash) {
+        try {
+            transactionLogRepository.save(BlockchainTransactionLog.builder()
+                    .userEmail(userEmail)
+                    .role(role)
+                    .batchId(batchId)
+                    .type(type)
+                    .txHash(txHash)
+                    .build());
+        } catch (Exception ex) {
+            // Log but do NOT roll back the batch operation — the batch is already on chain.
+            log.warn("Could not save transaction log for {} / {}: {}", userEmail, batchId, ex.getMessage());
+        }
     }
 }

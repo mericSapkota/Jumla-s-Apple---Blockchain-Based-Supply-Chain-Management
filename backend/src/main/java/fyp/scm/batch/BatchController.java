@@ -33,8 +33,10 @@ public class BatchController {
     // Role: COOPERATIVE
     // Certifies a HARVESTED batch
     @PutMapping("/certify/{batchId}")
-    public ResponseEntity<BatchResponse> certifyBatch(@PathVariable String batchId) {
-        return ResponseEntity.ok(batchService.certifyBatch(batchId));
+    public ResponseEntity<BatchResponse> certifyBatch(
+            @PathVariable String batchId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(batchService.certifyBatch(batchId, userDetails.getUsername()));
     }
 
     // ── PUT /api/batch/transit/{id} ────────────────────────────────────────
@@ -43,17 +45,20 @@ public class BatchController {
     @PutMapping("/transit/{batchId}")
     public ResponseEntity<BatchResponse> updateTransit(
             @PathVariable String batchId,
-            @RequestBody @Valid TransitUpdateRequest req) {
+            @RequestBody @Valid TransitUpdateRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-        return ResponseEntity.ok(batchService.updateTransit(batchId, req));
+        return ResponseEntity.ok(batchService.updateTransit(batchId, req, userDetails.getUsername()));
     }
 
     // ── PUT /api/batch/deliver/{id} ────────────────────────────────────────
     // Role: TRANSPORTER
     // Marks batch as DELIVERED
     @PutMapping("/deliver/{batchId}")
-    public ResponseEntity<BatchResponse> deliverBatch(@PathVariable String batchId) {
-        return ResponseEntity.ok(batchService.deliverBatch(batchId));
+    public ResponseEntity<BatchResponse> deliverBatch(
+            @PathVariable String batchId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(batchService.deliverBatch(batchId, userDetails.getUsername()));
     }
 
     // ── PUT /api/batch/ipfs/{id} ───────────────────────────────────────────
