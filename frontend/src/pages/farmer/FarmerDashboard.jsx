@@ -32,6 +32,10 @@ export default function FarmerDashboard() {
 
   const onSubmit = async (values) => {
     try {
+      if (values.aiResult !== "FRESH") {
+        toast.error("Cannot create batch: Apple is not fresh.");
+        return;
+      }
       const created = await createBatch({
         ...values,
         weightKg: Number(values.weightKg),

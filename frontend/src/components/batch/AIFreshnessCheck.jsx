@@ -33,7 +33,12 @@ export default function AIFreshnessCheck({ onResult }) {
       setResult(aiResult);
       setAiConfidence(confidence);
       onResult?.(aiResult);
-      toast.success(`AI check complete: ${aiResult}`);
+      console.log("confidence", confidence);
+      if (aiResult === "ROTTEN") {
+        toast.error("The apple appears to be rotten. Please discard it.");
+      } else {
+        toast.success("The apple appears to be fresh. You can proceed with processing.");
+      }
     } catch (err) {
       toast.error(err.message || "AI freshness check failed");
     } finally {
@@ -97,7 +102,11 @@ export default function AIFreshnessCheck({ onResult }) {
               disabled={checking}
               className="flex-1 bg-primary text-on-primary font-bold py-3 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
             >
-              {checking ? <Icon name="progress_activity" className="animate-spin" /> : <Icon name="science" />}
+              {checking ? (
+                <Icon name="progress_activity" className="animate-spin spin 2.5s " />
+              ) : (
+                <Icon name="science" />
+              )}
               {checking ? "Checking…" : "Run AI Check"}
             </button>
 

@@ -1,8 +1,12 @@
 import { z } from "zod";
 
 export const updateProfileSchema = z.object({
-  fullName: z.string().min(2, "Full name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
+  fullName: z.string().trim().min(2, "Full name is required"),
+  email: z.string().trim().email("Enter a valid email"),
+  dateOfBirth: z
+    .string()
+    .optional()
+    .refine((val) => !val || new Date(val) < new Date(), "Must be a past date"),
 });
 
 export const changePasswordSchema = z
