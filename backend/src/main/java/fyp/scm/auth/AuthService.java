@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -26,6 +27,9 @@ public class AuthService {
     private final AuthenticationManager authManager;
     private final FileStorageService fileStorageService;
     private final MailService mailService;
+    private final GoogleTokenVerifier googleTokenVerifier;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -65,8 +69,11 @@ public class AuthService {
         sendVerificationEmail(user);
 
         // No JWT issued yet — the account isn't usable until the email is verified.
-        return new AuthResponse(null, user.getRole().name(), user.getFullName(),
-                "Registration successful. Please check your email to verify your account.");
+        return AuthResponse.builder()
+                .role(user.getRole().name())
+                .fullName(user.getFullName())
+                .message("Registration successful. Please check your email to verify your account.")
+                .build();
     }
 
     public AuthResponse login(AuthRequest req) {
@@ -84,9 +91,107 @@ public class AuthService {
             throw new RuntimeException("Please verify your email before logging in.");
         }
 
-        // Step 4 — generate token
-        String token = jwtUtil.generateToken(user);
-        return new AuthResponse(token, user.getRole().name(), user.getFullName(), null);
+        // Step 4 — superadmin logins require a second factor: email a 6-digit
+        // code and hold the JWT until /verify-2fa succeeds.
+        if (user.getRole() == fyp.scm.user.Role.SUPERADMIN) {
+            String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+            user.setTwoFactorCode(code);
+            user.setTwoFactorCodeExpiry(Instant.now().plus(5, ChronoUnit.MINUTES));
+            user.setTwoFactorAttempts(0);
+            userRepository.save(user);
+            mailService.sendTwoFactorCode(user.getEmail(), user.getFullName(), code);
+            return AuthResponse.builder()
+                    .role(user.getRole().name())
+                    .fullName(user.getFullName())
+                    .twoFactorRequired(true)
+                    .message("A verification code has been sent to your email.")
+                    .build();
+        }
+
+        // Step 5 — generate token
+        return tokenResponse(user);
+    }
+
+    public AuthResponse verifyTwoFactor(String email, String code) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getTwoFactorCode() == null || user.getTwoFactorCodeExpiry() == null) {
+            throw new RuntimeException("No pending verification code. Please log in again.");
+        }
+        if (user.getTwoFactorCodeExpiry().isBefore(Instant.now())) {
+            clearTwoFactor(user);
+            throw new RuntimeException("The code has expired. Please log in again.");
+        }
+        if (user.getTwoFactorAttempts() >= 5) {
+            clearTwoFactor(user);
+            throw new RuntimeException("Too many attempts. Please log in again.");
+        }
+        if (!user.getTwoFactorCode().equals(code)) {
+            user.setTwoFactorAttempts(user.getTwoFactorAttempts() + 1);
+            userRepository.save(user);
+            throw new RuntimeException("Incorrect code.");
+        }
+
+        clearTwoFactor(user);
+        return tokenResponse(user);
+    }
+
+    public AuthResponse googleAuth(GoogleAuthRequest req) {
+        GoogleTokenVerifier.GoogleUser googleUser = googleTokenVerifier.verify(req.getCredential());
+
+        User existing = userRepository.findByEmail(googleUser.email()).orElse(null);
+        if (existing != null) {
+            // Google has proven ownership of this mailbox — treat as verified.
+            if (!existing.isEmailVerified()) {
+                existing.setEmailVerified(true);
+                existing.setVerificationToken(null);
+                existing.setVerificationTokenExpiry(null);
+                userRepository.save(existing);
+            }
+            return tokenResponse(existing);
+        }
+
+        // Brand-new email: we need a role and date of birth before creating
+        // the account — tell the frontend to collect them and retry.
+        if (req.getRole() == null || req.getDateOfBirth() == null) {
+            return AuthResponse.builder()
+                    .fullName(googleUser.fullName())
+                    .needsProfile(true)
+                    .message("Choose a role and date of birth to finish creating your account.")
+                    .build();
+        }
+        if (req.getRole() == fyp.scm.user.Role.SUPERADMIN) {
+            throw new RuntimeException("This role cannot be self-registered");
+        }
+
+        User user = User.builder()
+                .email(googleUser.email())
+                // Random password: Google accounts authenticate via Google only.
+                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .fullName(googleUser.fullName())
+                .role(req.getRole())
+                .dateOfBirth(req.getDateOfBirth())
+                .emailVerified(true)
+                .authProvider("GOOGLE")
+                .build();
+        userRepository.save(user);
+        return tokenResponse(user);
+    }
+
+    private void clearTwoFactor(User user) {
+        user.setTwoFactorCode(null);
+        user.setTwoFactorCodeExpiry(null);
+        user.setTwoFactorAttempts(0);
+        userRepository.save(user);
+    }
+
+    private AuthResponse tokenResponse(User user) {
+        return AuthResponse.builder()
+                .token(jwtUtil.generateToken(user))
+                .role(user.getRole().name())
+                .fullName(user.getFullName())
+                .build();
     }
 
     public void verifyEmail(String token) {

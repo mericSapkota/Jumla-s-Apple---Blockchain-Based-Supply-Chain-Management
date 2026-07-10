@@ -236,13 +236,12 @@ export default function ProfilePage() {
                 On-chain role: <span className="font-bold">{walletStatus.onChainRole}</span> · Account role:{" "}
                 <span className="font-bold">{walletStatus.offChainRole}</span>
               </p>
-              {Number(walletStatus.onChainRole) !== { FARMER: 1, COOPERATIVE: 2, TRANSPORTER: 3, CONSUMER: 4 }[
-                walletStatus.offChainRole
-              ] && (
+              {Number(walletStatus.onChainRole) !==
+                { FARMER: 1, COOPERATIVE: 2, TRANSPORTER: 3, CONSUMER: 4 }[walletStatus.offChainRole] && (
                 <>
                   <p className="text-xs text-error">
-                    Your wallet's on-chain role doesn't match your account role yet — blockchain actions will fail
-                    until this is fixed.
+                    Your wallet's on-chain role doesn't match your account role yet — blockchain actions will fail until
+                    this is fixed.
                   </p>
                   <Button
                     variant="accent"
@@ -259,8 +258,8 @@ export default function ProfilePage() {
           ) : (
             <>
               <p className="text-sm text-on-surface-variant">
-                Link a MetaMask wallet so you can sign your own blockchain actions (create, certify, transit,
-                deliver) as a {user?.role?.toLowerCase()}.
+                Link a MetaMask wallet so you can sign your own blockchain actions (create, certify, transit, deliver)
+                as a {user?.role?.toLowerCase()}.
               </p>
               <Button
                 variant="primary"

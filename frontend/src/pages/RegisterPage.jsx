@@ -1,10 +1,13 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { jwtDecode } from "jwt-decode";
 import { registerSchema, ROLES } from "../schemas/authSchemas";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth, roleHomePath } from "../auth/AuthContext";
+import { googleAuth } from "../api/authApi";
+import GoogleButton from "../components/auth/GoogleButton";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import Icon from "../components/ui/Icon";
@@ -17,16 +20,25 @@ const ROLE_ICONS = {
 };
 
 export default function RegisterPage() {
-  const { register: registerUser } = useAuth();
+  const { register: registerUser, completeAuth } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+
+  // Set once a Google credential has been obtained: email/full name in the
+  // form are then read-only (the backend derives them from the verified
+  // token, not from this form) and a password is no longer required.
+  const [googleCredential, setGoogleCredential] = useState(null);
+  const [submittingGoogle, setSubmittingGoogle] = useState(false);
 
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    getValues,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(registerSchema),
@@ -34,6 +46,37 @@ export default function RegisterPage() {
   });
 
   const selectedRole = watch("role");
+  const watchedEmail = watch("email");
+
+  // Auto-fill email + full name from the Google ID token. Google never
+  // supplies a date of birth, so that field stays a manual, editable input.
+  const applyGoogleCredential = (credential) => {
+    let profile;
+    try {
+      profile = jwtDecode(credential);
+    } catch {
+      toast.error("Could not read your Google account details.");
+      return;
+    }
+    setGoogleCredential(credential);
+    setValue("email", profile.email || "", { shouldValidate: true });
+    setValue("fullName", profile.name || profile.email || "", { shouldValidate: true });
+  };
+
+  // If the user already tried "Continue with Google" on the login page and
+  // has no account yet, that page hands the credential off here via router
+  // state so they don't have to authenticate with Google a second time.
+  useEffect(() => {
+    if (location.state?.googleCredential) {
+      applyGoogleCredential(location.state.googleCredential);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const useDifferentMethod = () => {
+    setGoogleCredential(null);
+    reset({ role: getValues("role"), dateOfBirth: getValues("dateOfBirth"), email: "", fullName: "" });
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -48,7 +91,7 @@ export default function RegisterPage() {
     try {
       // Extract the File from the FileList before building the JSON payload
       const profilePictureFile = values.profilePicture?.[0] ?? null;
-      const { profilePicture: _ignored, ...jsonPayload } = values;
+      const { profilePicture: _ignored, confirmPassword: _ignored2, ...jsonPayload } = values;
 
       const data = await registerUser(jsonPayload, profilePictureFile);
       toast.success(data.message || "Registration successful. Please check your email to verify your account.");
@@ -56,6 +99,31 @@ export default function RegisterPage() {
     } catch (err) {
       const message = err?.response?.data?.message || "Could not register. Try a different email.";
       toast.error(message);
+    }
+  };
+
+  // Google signup: email/full name come from the verified credential; role +
+  // date of birth still come from the form, filled in after the auto-fill.
+  const onGoogleSubmit = async () => {
+    const { role, dateOfBirth } = getValues();
+    if (!role) {
+      toast.error("Select a role to finish signing up.");
+      return;
+    }
+    if (!dateOfBirth) {
+      toast.error("Enter your date of birth to finish signing up.");
+      return;
+    }
+    setSubmittingGoogle(true);
+    try {
+      const data = await googleAuth({ credential: googleCredential, role, dateOfBirth });
+      completeAuth(data);
+      toast.success(`Welcome to Jumla Trace, ${data.fullName}`);
+      navigate(roleHomePath(data.role));
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Google sign-up failed.");
+    } finally {
+      setSubmittingGoogle(false);
     }
   };
 
@@ -151,6 +219,8 @@ export default function RegisterPage() {
               icon="badge"
               placeholder="Ram Bahadur"
               error={errors.fullName?.message}
+              readOnly={!!googleCredential}
+              className={googleCredential ? "opacity-70 cursor-not-allowed" : ""}
               {...register("fullName")}
             />
             <Input
@@ -159,6 +229,8 @@ export default function RegisterPage() {
               type="email"
               placeholder="name@jumla.org"
               error={errors.email?.message}
+              readOnly={!!googleCredential}
+              className={googleCredential ? "opacity-70 cursor-not-allowed" : ""}
               {...register("email")}
             />
             <Input
@@ -168,19 +240,57 @@ export default function RegisterPage() {
               error={errors.dateOfBirth?.message}
               {...register("dateOfBirth")}
             />
-            <Input
-              label="Password"
-              icon="lock"
-              type="password"
-              placeholder="At least 6 characters"
-              error={errors.password?.message}
-              {...register("password")}
-            />
 
-            <Button type="submit" loading={isSubmitting} icon="arrow_forward" className="w-full">
-              Create account
-            </Button>
+            {!googleCredential && (
+              <>
+                <Input
+                  label="Password"
+                  icon="lock"
+                  type="password"
+                  placeholder="At least 6 characters"
+                  error={errors.password?.message}
+                  {...register("password")}
+                />
+                <Input
+                  label="Confirm password"
+                  icon="lock_reset"
+                  type="password"
+                  placeholder="Re-enter your password"
+                  error={errors.confirmPassword?.message}
+                  {...register("confirmPassword")}
+                />
+              </>
+            )}
+
+            {googleCredential ? (
+              <Button
+                type="button"
+                onClick={onGoogleSubmit}
+                loading={submittingGoogle}
+                icon="arrow_forward"
+                className="w-full"
+              >
+                Finish signing up with Google
+              </Button>
+            ) : (
+              <Button type="submit" loading={isSubmitting} icon="arrow_forward" className="w-full">
+                Create account
+              </Button>
+            )}
           </form>
+
+          {googleCredential ? (
+            <p className="text-center text-xs text-on-surface-variant mt-6">
+              Continuing as <span className="font-bold">{watchedEmail}</span> via Google ·{" "}
+              <button type="button" onClick={useDifferentMethod} className="font-bold text-primary hover:underline">
+                use email &amp; password instead
+              </button>
+            </p>
+          ) : (
+            <div className="mt-6">
+              <GoogleButton onCredential={applyGoogleCredential} text="signup_with" />
+            </div>
+          )}
         </div>
 
         <p className="text-center text-sm text-on-surface-variant mt-6">

@@ -37,6 +37,16 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(req));
     }
 
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> google(@RequestBody @Valid GoogleAuthRequest req) {
+        return ResponseEntity.ok(authService.googleAuth(req));
+    }
+
+    @PostMapping("/verify-2fa")
+    public ResponseEntity<AuthResponse> verifyTwoFactor(@RequestBody @Valid TwoFactorRequest req) {
+        return ResponseEntity.ok(authService.verifyTwoFactor(req.getEmail(), req.getCode()));
+    }
+
     @GetMapping("/verify-email")
     public ResponseEntity<Map<String, String>> verifyEmail(@RequestParam String token) {
         authService.verifyEmail(token);

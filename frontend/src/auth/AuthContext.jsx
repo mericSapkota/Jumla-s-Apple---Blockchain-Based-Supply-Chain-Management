@@ -36,7 +36,15 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (payload) => {
     const data = await loginUser(payload);
-    persist(data);
+    // Superadmin logins come back without a token (twoFactorRequired) — only
+    // persist once we actually have one.
+    if (data.token) persist(data);
+    return data;
+  }, []);
+
+  // Persist a token-bearing response from the 2FA or Google flows.
+  const completeAuth = useCallback((data) => {
+    if (data?.token) persist(data);
     return data;
   }, []);
 
@@ -80,7 +88,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isAuthenticated: !!user, updateUserInfo }}>
+    <AuthContext.Provider value={{ user, login, register, logout, completeAuth, isAuthenticated: !!user, updateUserInfo }}>
       {children}
     </AuthContext.Provider>
   );

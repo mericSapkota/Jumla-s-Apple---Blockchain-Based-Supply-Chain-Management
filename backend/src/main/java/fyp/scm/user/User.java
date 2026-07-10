@@ -66,6 +66,19 @@ public class User implements UserDetails {
     @Builder.Default
     private Instant createdAt = Instant.now();
 
+    // 2FA (superadmin logins only): 6-digit emailed code with expiry and a
+    // brute-force attempt counter — see AuthService.verifyTwoFactor.
+    private String twoFactorCode;
+
+    private Instant twoFactorCodeExpiry;
+
+    @Builder.Default
+    private int twoFactorAttempts = 0;
+
+    // "LOCAL" (email+password) or "GOOGLE" (created via Google sign-in).
+    @Builder.Default
+    private String authProvider = "LOCAL";
+
     // ── UserDetails impl ──────────────────────────
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

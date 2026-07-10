@@ -21,6 +21,12 @@ export const registerUser = (payload, profilePictureFile = null) => {
 
 export const loginUser = (payload) => axiosClient.post("/api/auth/login", payload).then((res) => res.data);
 
+/** Google sign-in/up: { credential, role?, dateOfBirth? }. */
+export const googleAuth = (payload) => axiosClient.post("/api/auth/google", payload).then((res) => res.data);
+
+/** Superadmin 2FA: { email, code }. */
+export const verifyTwoFactor = (payload) => axiosClient.post("/api/auth/verify-2fa", payload).then((res) => res.data);
+
 export const verifyEmail = (token) =>
   axiosClient.get("/api/auth/verify-email", { params: { token } }).then((res) => res.data);
 
