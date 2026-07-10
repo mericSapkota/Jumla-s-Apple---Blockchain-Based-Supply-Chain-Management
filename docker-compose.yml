@@ -1,0 +1,8 @@
+services:
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: jumla-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP — backend sends verification/2FA emails here
+      - "8025:8025" # Web UI — view caught emails at http://localhost:8025

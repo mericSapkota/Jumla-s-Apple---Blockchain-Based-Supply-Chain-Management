@@ -53,7 +53,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
-        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException ex) {
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException
+                 | org.springframework.security.core.userdetails.UsernameNotFoundException ex) {
+            // Covers malformed/expired tokens as well as structurally valid
+            // tokens for a user that no longer exists (e.g. DB reseeded,
+            // account deleted/renamed) — treat the request as unauthenticated
+            // instead of letting it crash the filter chain.
             SecurityContextHolder.clearContext();
         }
         chain.doFilter(request, response);

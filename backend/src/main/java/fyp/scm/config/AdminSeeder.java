@@ -28,7 +28,13 @@ public class AdminSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        if (adminEmail == null || adminEmail.isBlank() || adminPassword == null || adminPassword.isBlank()) {
+            log.error("ADMIN_EMAIL / ADMIN_PASSWORD did not resolve to a value — skipping superadmin seed. "
+                    + "Check that backend/.env exists and is being loaded from the app's working directory.");
+            return;
+        }
         if (userRepository.findByEmail(adminEmail).isPresent()) {
+            log.info("Superadmin already seeded as {}", adminEmail);
             return;
         }
         User admin = User.builder()
