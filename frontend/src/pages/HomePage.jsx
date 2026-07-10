@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "../components/ui/Icon";
 import { useAuth, roleHomePath } from "../auth/AuthContext";
@@ -50,45 +51,102 @@ const FEATURES = [
 
 export default function HomePage() {
   const { user } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const authLink = user ? (
+    <Link
+      to={roleHomePath(user.role)}
+      onClick={() => setMenuOpen(false)}
+      className="bg-primary text-on-primary font-bold text-sm rounded-2xl py-2.5 px-5 shadow-soft hover:bg-primary-container transition-all text-center"
+    >
+      Go to dashboard
+    </Link>
+  ) : (
+    <Link
+      to="/login"
+      onClick={() => setMenuOpen(false)}
+      className="bg-primary text-on-primary font-bold text-sm rounded-2xl py-2.5 px-5 shadow-soft hover:bg-primary-container transition-all text-center"
+    >
+      Sign in
+    </Link>
+  );
 
   return (
     <div className="min-h-screen bg-surface overflow-x-hidden">
       {/* Nav */}
-      <header className="fixed top-0 left-0 w-full z-50 bg-[#fcf9f3]/90 backdrop-blur-xl shadow-card flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2">
-          <Icon name="forest" className="text-3xl text-primary" />
-          <span className="font-headline text-xl font-bold text-primary">Jumla Trace</span>
+      <header className="fixed top-0 left-0 w-full z-50 bg-[#fcf9f3]/90 backdrop-blur-xl shadow-card">
+        <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Icon name="forest" className="text-3xl text-primary" />
+            <span className="font-headline text-xl font-bold text-primary">Jumla Trace</span>
+          </div>
+
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-3">
+            <Link
+              to="/blogs"
+              className="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors px-3 py-2"
+            >
+              Blog
+            </Link>
+            <Link
+              to="/consumer/scan"
+              className="flex items-center gap-1.5 text-sm font-medium text-on-surface-variant hover:text-primary transition-colors px-3 py-2"
+            >
+              <Icon name="qr_code_scanner" size="18px" />
+              Trace an apple
+            </Link>
+            <Link
+              to="/donate"
+              className="flex items-center gap-1.5 text-sm font-medium text-on-surface-variant hover:text-primary transition-colors px-3 py-2"
+            >
+              <Icon name="volunteer_activism" size="18px" />
+              Support us
+            </Link>
+            {authLink}
+          </nav>
+
+          {/* Mobile menu toggle */}
+          <button
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-colors"
+          >
+            <Icon name={menuOpen ? "close" : "menu"} className="text-2xl" />
+          </button>
         </div>
-        <nav className="flex items-center gap-3">
-          <Link
-            to="/blogs"
-            className="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors px-3 py-2"
-          >
-            Blog
-          </Link>
-          <Link
-            to="/consumer/scan"
-            className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-on-surface-variant hover:text-primary transition-colors px-3 py-2"
-          >
-            <Icon name="qr_code_scanner" size="18px" />
-            Trace an apple
-          </Link>
-          {user ? (
+
+        {/* Mobile nav panel */}
+        {menuOpen && (
+          <nav className="md:hidden flex flex-col gap-1 px-6 pb-5 pt-1">
             <Link
-              to={roleHomePath(user.role)}
-              className="bg-primary text-on-primary font-bold text-sm rounded-2xl py-2.5 px-5 shadow-soft hover:bg-primary-container transition-all"
+              to="/blogs"
+              onClick={() => setMenuOpen(false)}
+              className="text-sm font-medium text-on-surface-variant hover:text-primary transition-colors px-3 py-2.5 rounded-xl hover:bg-surface-container-high"
             >
-              Go to dashboard
+              Blog
             </Link>
-          ) : (
             <Link
-              to="/login"
-              className="bg-primary text-on-primary font-bold text-sm rounded-2xl py-2.5 px-5 shadow-soft hover:bg-primary-container transition-all"
+              to="/consumer/scan"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-1.5 text-sm font-medium text-on-surface-variant hover:text-primary transition-colors px-3 py-2.5 rounded-xl hover:bg-surface-container-high"
             >
-              Sign in
+              <Icon name="qr_code_scanner" size="18px" />
+              Trace an apple
             </Link>
-          )}
-        </nav>
+            <Link
+              to="/donate"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-1.5 text-sm font-medium text-on-surface-variant hover:text-primary transition-colors px-3 py-2.5 rounded-xl hover:bg-surface-container-high"
+            >
+              <Icon name="volunteer_activism" size="18px" />
+              Support us
+            </Link>
+            <div className="pt-2">{authLink}</div>
+          </nav>
+        )}
       </header>
 
       {/* Hero */}
@@ -97,7 +155,7 @@ export default function HomePage() {
         <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-secondary-container opacity-20 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 max-w-3xl mx-auto space-y-6">
-          <span className="inline-flex items-center gap-2 bg-primary-fixed text-on-primary-container text-[11px] font-bold uppercase tracking-widest px-4 py-2 rounded-full">
+          <span className="inline-flex items-center gap-2 bg-primary-fixed  text-black text-[11px] font-bold uppercase tracking-widest px-4 py-2 rounded-full">
             <Icon name="bolt" size="14px" />
             Built on Ethereum · Sepolia testnet
           </span>
@@ -107,9 +165,8 @@ export default function HomePage() {
             <span className="text-primary">tells its own story.</span>
           </h1>
           <p className="text-on-surface-variant text-base sm:text-lg max-w-xl mx-auto">
-            From the high-altitude orchards of Karnali to your kitchen table — scan one QR
-            code and see a tamper-proof record of where your apple came from, who certified
-            it, and how it got to you.
+            From the high-altitude orchards of Karnali to your kitchen table — scan one QR code and see a tamper-proof
+            record of where your apple came from, who certified it, and how it got to you.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Link
@@ -133,12 +190,8 @@ export default function HomePage() {
       {/* Journey / how it works */}
       <section className="px-6 py-20 max-w-5xl mx-auto">
         <div className="text-center space-y-2 mb-12">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-            How it works
-          </span>
-          <h2 className="font-headline text-3xl font-bold text-on-surface">
-            One ledger, four checkpoints
-          </h2>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">How it works</span>
+          <h2 className="font-headline text-3xl font-bold text-on-surface">One ledger, four checkpoints</h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">

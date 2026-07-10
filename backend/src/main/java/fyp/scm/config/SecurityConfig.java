@@ -28,6 +28,10 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
 
+    // Comma-separated list, e.g. "http://localhost:5173,http://localhost:5175"
+    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins}")
+    private String allowedOrigins;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
@@ -44,11 +48,13 @@ public class SecurityConfig {
 
                         // Public endpoints
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/donations/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/batch/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/batch/qr/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/blogs", "/api/blogs/*").permitAll()
                         // Role protected endpoints
-                        .requestMatchers("/api/batch/create").hasRole("FARMER")
+                        .requestMatchers("/api/admin/**").hasRole("SUPERADMIN")
+                        .requestMatchers("/api/batch/create", "/api/batch/next-id").hasRole("FARMER")
                         .requestMatchers("/api/batch/certify/**").hasRole("COOPERATIVE")
                         .requestMatchers("/api/batch/transit/**").hasRole("TRANSPORTER")
                         .requestMatchers("/api/batch/deliver/**").hasRole("TRANSPORTER")
@@ -58,6 +64,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/batch/status/**").authenticated()
 
                         .requestMatchers("/api/users/me", "/api/users/me/password", "/api/users/me/photo").authenticated()
+                        .requestMatchers("/api/users/me/wallet/**").authenticated()
                         .requestMatchers("/api/certificate/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/blogs/my").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/blogs").authenticated()
@@ -92,7 +99,7 @@ public class SecurityConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
         config.setAllowedMethods(
                 List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
         );

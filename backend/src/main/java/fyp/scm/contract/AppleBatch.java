@@ -124,9 +124,9 @@ public class AppleBatch extends Contract {
 
     public static List<BatchCertifiedEventResponse> getBatchCertifiedEvents(
             TransactionReceipt transactionReceipt) {
-        List<Contract.EventValuesWithLog> valueList = staticExtractEventParametersWithLog(BATCHCERTIFIED_EVENT, transactionReceipt);
+        List<EventValuesWithLog> valueList = staticExtractEventParametersWithLog(BATCHCERTIFIED_EVENT, transactionReceipt);
         ArrayList<BatchCertifiedEventResponse> responses = new ArrayList<BatchCertifiedEventResponse>(valueList.size());
-        for (Contract.EventValuesWithLog eventValues : valueList) {
+        for (EventValuesWithLog eventValues : valueList) {
             BatchCertifiedEventResponse typedResponse = new BatchCertifiedEventResponse();
             typedResponse.log = eventValues.getLog();
             typedResponse.batchId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
@@ -138,7 +138,7 @@ public class AppleBatch extends Contract {
     }
 
     public static BatchCertifiedEventResponse getBatchCertifiedEventFromLog(Log log) {
-        Contract.EventValuesWithLog eventValues = staticExtractEventParametersWithLog(BATCHCERTIFIED_EVENT, log);
+        EventValuesWithLog eventValues = staticExtractEventParametersWithLog(BATCHCERTIFIED_EVENT, log);
         BatchCertifiedEventResponse typedResponse = new BatchCertifiedEventResponse();
         typedResponse.log = log;
         typedResponse.batchId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
@@ -160,9 +160,9 @@ public class AppleBatch extends Contract {
 
     public static List<BatchCreatedEventResponse> getBatchCreatedEvents(
             TransactionReceipt transactionReceipt) {
-        List<Contract.EventValuesWithLog> valueList = staticExtractEventParametersWithLog(BATCHCREATED_EVENT, transactionReceipt);
+        List<EventValuesWithLog> valueList = staticExtractEventParametersWithLog(BATCHCREATED_EVENT, transactionReceipt);
         ArrayList<BatchCreatedEventResponse> responses = new ArrayList<BatchCreatedEventResponse>(valueList.size());
-        for (Contract.EventValuesWithLog eventValues : valueList) {
+        for (EventValuesWithLog eventValues : valueList) {
             BatchCreatedEventResponse typedResponse = new BatchCreatedEventResponse();
             typedResponse.log = eventValues.getLog();
             typedResponse.batchId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
@@ -174,7 +174,7 @@ public class AppleBatch extends Contract {
     }
 
     public static BatchCreatedEventResponse getBatchCreatedEventFromLog(Log log) {
-        Contract.EventValuesWithLog eventValues = staticExtractEventParametersWithLog(BATCHCREATED_EVENT, log);
+        EventValuesWithLog eventValues = staticExtractEventParametersWithLog(BATCHCREATED_EVENT, log);
         BatchCreatedEventResponse typedResponse = new BatchCreatedEventResponse();
         typedResponse.log = log;
         typedResponse.batchId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
@@ -196,9 +196,9 @@ public class AppleBatch extends Contract {
 
     public static List<BatchDeliveredEventResponse> getBatchDeliveredEvents(
             TransactionReceipt transactionReceipt) {
-        List<Contract.EventValuesWithLog> valueList = staticExtractEventParametersWithLog(BATCHDELIVERED_EVENT, transactionReceipt);
+        List<EventValuesWithLog> valueList = staticExtractEventParametersWithLog(BATCHDELIVERED_EVENT, transactionReceipt);
         ArrayList<BatchDeliveredEventResponse> responses = new ArrayList<BatchDeliveredEventResponse>(valueList.size());
-        for (Contract.EventValuesWithLog eventValues : valueList) {
+        for (EventValuesWithLog eventValues : valueList) {
             BatchDeliveredEventResponse typedResponse = new BatchDeliveredEventResponse();
             typedResponse.log = eventValues.getLog();
             typedResponse.batchId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
@@ -211,7 +211,7 @@ public class AppleBatch extends Contract {
     }
 
     public static BatchDeliveredEventResponse getBatchDeliveredEventFromLog(Log log) {
-        Contract.EventValuesWithLog eventValues = staticExtractEventParametersWithLog(BATCHDELIVERED_EVENT, log);
+        EventValuesWithLog eventValues = staticExtractEventParametersWithLog(BATCHDELIVERED_EVENT, log);
         BatchDeliveredEventResponse typedResponse = new BatchDeliveredEventResponse();
         typedResponse.log = log;
         typedResponse.batchId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
@@ -234,9 +234,9 @@ public class AppleBatch extends Contract {
 
     public static List<IPFSHashUpdatedEventResponse> getIPFSHashUpdatedEvents(
             TransactionReceipt transactionReceipt) {
-        List<Contract.EventValuesWithLog> valueList = staticExtractEventParametersWithLog(IPFSHASHUPDATED_EVENT, transactionReceipt);
+        List<EventValuesWithLog> valueList = staticExtractEventParametersWithLog(IPFSHASHUPDATED_EVENT, transactionReceipt);
         ArrayList<IPFSHashUpdatedEventResponse> responses = new ArrayList<IPFSHashUpdatedEventResponse>(valueList.size());
-        for (Contract.EventValuesWithLog eventValues : valueList) {
+        for (EventValuesWithLog eventValues : valueList) {
             IPFSHashUpdatedEventResponse typedResponse = new IPFSHashUpdatedEventResponse();
             typedResponse.log = eventValues.getLog();
             typedResponse.batchId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
@@ -247,7 +247,7 @@ public class AppleBatch extends Contract {
     }
 
     public static IPFSHashUpdatedEventResponse getIPFSHashUpdatedEventFromLog(Log log) {
-        Contract.EventValuesWithLog eventValues = staticExtractEventParametersWithLog(IPFSHASHUPDATED_EVENT, log);
+        EventValuesWithLog eventValues = staticExtractEventParametersWithLog(IPFSHASHUPDATED_EVENT, log);
         IPFSHashUpdatedEventResponse typedResponse = new IPFSHashUpdatedEventResponse();
         typedResponse.log = log;
         typedResponse.batchId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
@@ -268,9 +268,9 @@ public class AppleBatch extends Contract {
 
     public static List<TransitUpdatedEventResponse> getTransitUpdatedEvents(
             TransactionReceipt transactionReceipt) {
-        List<Contract.EventValuesWithLog> valueList = staticExtractEventParametersWithLog(TRANSITUPDATED_EVENT, transactionReceipt);
+        List<EventValuesWithLog> valueList = staticExtractEventParametersWithLog(TRANSITUPDATED_EVENT, transactionReceipt);
         ArrayList<TransitUpdatedEventResponse> responses = new ArrayList<TransitUpdatedEventResponse>(valueList.size());
-        for (Contract.EventValuesWithLog eventValues : valueList) {
+        for (EventValuesWithLog eventValues : valueList) {
             TransitUpdatedEventResponse typedResponse = new TransitUpdatedEventResponse();
             typedResponse.log = eventValues.getLog();
             typedResponse.batchId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
@@ -283,7 +283,7 @@ public class AppleBatch extends Contract {
     }
 
     public static TransitUpdatedEventResponse getTransitUpdatedEventFromLog(Log log) {
-        Contract.EventValuesWithLog eventValues = staticExtractEventParametersWithLog(TRANSITUPDATED_EVENT, log);
+        EventValuesWithLog eventValues = staticExtractEventParametersWithLog(TRANSITUPDATED_EVENT, log);
         TransitUpdatedEventResponse typedResponse = new TransitUpdatedEventResponse();
         typedResponse.log = log;
         typedResponse.batchId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
@@ -307,15 +307,15 @@ public class AppleBatch extends Contract {
     public RemoteFunctionCall<TransactionReceipt> assignRole(String _user, BigInteger _role) {
         final Function function = new Function(
                 FUNC_ASSIGNROLE, 
-                Arrays.<Type>asList(new org.web3j.abi.datatypes.Address(160, _user), 
-                new org.web3j.abi.datatypes.generated.Uint8(_role)), 
+                Arrays.<Type>asList(new Address(160, _user),
+                new Uint8(_role)),
                 Collections.<TypeReference<?>>emptyList());
         return executeRemoteCallTransaction(function);
     }
 
     public RemoteFunctionCall<Boolean> batchIdExists(String _batchId) {
         final Function function = new Function(FUNC_BATCHIDEXISTS, 
-                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(_batchId)), 
+                Arrays.<Type>asList(new Utf8String(_batchId)),
                 Arrays.<TypeReference<?>>asList(new TypeReference<Bool>() {}));
         return executeRemoteCallSingleValueReturn(function, Boolean.class);
     }
@@ -323,7 +323,7 @@ public class AppleBatch extends Contract {
     public RemoteFunctionCall<TransactionReceipt> certifyBatch(String _batchId) {
         final Function function = new Function(
                 FUNC_CERTIFYBATCH, 
-                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(_batchId)), 
+                Arrays.<Type>asList(new Utf8String(_batchId)),
                 Collections.<TypeReference<?>>emptyList());
         return executeRemoteCallTransaction(function);
     }
@@ -333,14 +333,14 @@ public class AppleBatch extends Contract {
             BigInteger _harvestDate, String _ipfsHash, String _aiResult) {
         final Function function = new Function(
                 FUNC_CREATEBATCH, 
-                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(_batchId), 
-                new org.web3j.abi.datatypes.Utf8String(_farmerName), 
-                new org.web3j.abi.datatypes.Utf8String(_farmLocation), 
-                new org.web3j.abi.datatypes.Utf8String(_appleVariety), 
-                new org.web3j.abi.datatypes.generated.Uint256(_weightKg), 
-                new org.web3j.abi.datatypes.generated.Uint256(_harvestDate), 
-                new org.web3j.abi.datatypes.Utf8String(_ipfsHash), 
-                new org.web3j.abi.datatypes.Utf8String(_aiResult)), 
+                Arrays.<Type>asList(new Utf8String(_batchId),
+                new Utf8String(_farmerName),
+                new Utf8String(_farmLocation),
+                new Utf8String(_appleVariety),
+                new Uint256(_weightKg),
+                new Uint256(_harvestDate),
+                new Utf8String(_ipfsHash),
+                new Utf8String(_aiResult)),
                 Collections.<TypeReference<?>>emptyList());
         return executeRemoteCallTransaction(function);
     }
@@ -348,7 +348,7 @@ public class AppleBatch extends Contract {
     public RemoteFunctionCall<TransactionReceipt> deliverBatch(String _batchId) {
         final Function function = new Function(
                 FUNC_DELIVERBATCH, 
-                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(_batchId)), 
+                Arrays.<Type>asList(new Utf8String(_batchId)),
                 Collections.<TypeReference<?>>emptyList());
         return executeRemoteCallTransaction(function);
     }
@@ -371,7 +371,7 @@ public class AppleBatch extends Contract {
     public RemoteFunctionCall<Tuple12<String, String, String, String, BigInteger, BigInteger, BigInteger, BigInteger, String, BigInteger, String, String>> getBatch(
             String _batchId) {
         final Function function = new Function(FUNC_GETBATCH, 
-                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(_batchId)), 
+                Arrays.<Type>asList(new Utf8String(_batchId)),
                 Arrays.<TypeReference<?>>asList(new TypeReference<Utf8String>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Uint256>() {}, new TypeReference<Uint256>() {}, new TypeReference<Uint8>() {}, new TypeReference<Uint256>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Uint256>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Utf8String>() {}));
         return new RemoteFunctionCall<Tuple12<String, String, String, String, BigInteger, BigInteger, BigInteger, BigInteger, String, BigInteger, String, String>>(function,
                 new Callable<Tuple12<String, String, String, String, BigInteger, BigInteger, BigInteger, BigInteger, String, BigInteger, String, String>>() {
@@ -398,7 +398,7 @@ public class AppleBatch extends Contract {
 
     public RemoteFunctionCall<String> getBatchStatus(String _batchId) {
         final Function function = new Function(FUNC_GETBATCHSTATUS, 
-                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(_batchId)), 
+                Arrays.<Type>asList(new Utf8String(_batchId)),
                 Arrays.<TypeReference<?>>asList(new TypeReference<Utf8String>() {}));
         return executeRemoteCallSingleValueReturn(function, String.class);
     }
@@ -406,7 +406,7 @@ public class AppleBatch extends Contract {
     public RemoteFunctionCall<Tuple3<List<String>, List<BigInteger>, List<String>>> getTransitHistory(
             String _batchId) {
         final Function function = new Function(FUNC_GETTRANSITHISTORY, 
-                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(_batchId)), 
+                Arrays.<Type>asList(new Utf8String(_batchId)),
                 Arrays.<TypeReference<?>>asList(new TypeReference<DynamicArray<Utf8String>>() {}, new TypeReference<DynamicArray<Uint256>>() {}, new TypeReference<DynamicArray<Address>>() {}));
         return new RemoteFunctionCall<Tuple3<List<String>, List<BigInteger>, List<String>>>(function,
                 new Callable<Tuple3<List<String>, List<BigInteger>, List<String>>>() {
@@ -438,7 +438,7 @@ public class AppleBatch extends Contract {
 
     public RemoteFunctionCall<BigInteger> roles(String param0) {
         final Function function = new Function(FUNC_ROLES, 
-                Arrays.<Type>asList(new org.web3j.abi.datatypes.Address(160, param0)), 
+                Arrays.<Type>asList(new Address(160, param0)),
                 Arrays.<TypeReference<?>>asList(new TypeReference<Uint8>() {}));
         return executeRemoteCallSingleValueReturn(function, BigInteger.class);
     }
@@ -454,8 +454,8 @@ public class AppleBatch extends Contract {
             String _ipfsHash) {
         final Function function = new Function(
                 FUNC_UPDATEIPFSHASH, 
-                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(_batchId), 
-                new org.web3j.abi.datatypes.Utf8String(_ipfsHash)), 
+                Arrays.<Type>asList(new Utf8String(_batchId),
+                new Utf8String(_ipfsHash)),
                 Collections.<TypeReference<?>>emptyList());
         return executeRemoteCallTransaction(function);
     }
@@ -464,9 +464,9 @@ public class AppleBatch extends Contract {
             String _destination) {
         final Function function = new Function(
                 FUNC_UPDATETRANSIT, 
-                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(_batchId), 
-                new org.web3j.abi.datatypes.Utf8String(_location), 
-                new org.web3j.abi.datatypes.Utf8String(_destination)), 
+                Arrays.<Type>asList(new Utf8String(_batchId),
+                new Utf8String(_location),
+                new Utf8String(_destination)),
                 Collections.<TypeReference<?>>emptyList());
         return executeRemoteCallTransaction(function);
     }
@@ -515,7 +515,7 @@ public class AppleBatch extends Contract {
         return deployRemoteCall(AppleBatch.class, web3j, transactionManager, gasPrice, gasLimit, getDeploymentBinary(), "");
     }
 
-    public static void linkLibraries(List<Contract.LinkReference> references) {
+    public static void linkLibraries(List<LinkReference> references) {
         librariesLinkedBinary = linkBinaryWithReferences(BINARY, references);
     }
 

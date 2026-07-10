@@ -11,7 +11,8 @@ import Icon from "../../components/ui/Icon";
 import AIFreshnessCheck from "../../components/batch/AIFreshnessCheck";
 import QRDisplay from "../../components/batch/QRDisplay";
 import { createBatchSchema, APPLE_VARIETIES } from "../../schemas/batchSchemas";
-import { createBatch } from "../../api/batchApi";
+import { createBatch, getNextBatchId } from "../../api/batchApi";
+import { createBatchOnChain } from "../../blockchain/batchContract";
 import { useAuth } from "../../auth/AuthContext";
 import CertificateBanner from "../../components/certificate/CertificateBanner";
 
@@ -36,16 +37,33 @@ export default function FarmerDashboard() {
         toast.error("Cannot create batch: Apple is not fresh.");
         return;
       }
-      const created = await createBatch({
-        ...values,
+
+      // 1) Reserve a unique batch ID from the backend before touching MetaMask.
+      const batchId = await getNextBatchId();
+
+      // 2) Send the actual createBatch() transaction, signed by the farmer's
+      //    own connected wallet. This is what the contract's role check sees.
+      const harvestEpochSeconds = Math.floor(new Date(values.harvestDate).getTime() / 1000);
+      const txHash = await createBatchOnChain({
+        batchId,
+        farmerName: user?.fullName || "",
+        farmLocation: values.farmLocation,
+        appleVariety: values.appleVariety,
         weightKg: Number(values.weightKg),
-        harvestDate: new Date(values.harvestDate).toISOString(),
+        harvestEpochSeconds,
+        ipfsHash: values.ipfsHash || "",
+        aiResult: values.aiResult,
       });
+
+      // 3) Now that it's confirmed on-chain, ask the backend to verify the
+      //    tx and mirror the record into Postgres.
+      const created = await createBatch({ batchId, txHash, photoPath: values.photoPath });
+
       toast.success(`Batch ${created.batchId} registered on chain`);
       reset({ aiResult: "PENDING", ipfsHash: "", photoPath: "" });
       setSelectedBatch(created);
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Could not create batch");
+      toast.error(err?.message || err?.response?.data?.message || "Could not create batch");
     }
   };
 

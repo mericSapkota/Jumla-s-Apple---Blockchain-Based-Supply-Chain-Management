@@ -6,6 +6,7 @@ import BatchTable from "../../components/batch/BatchTable";
 import Button from "../../components/ui/Button";
 import Icon from "../../components/ui/Icon";
 import { getBatchesByStatus, certifyBatch } from "../../api/batchApi";
+import { certifyBatchOnChain } from "../../blockchain/batchContract";
 import CertificateBanner from "../../components/certificate/CertificateBanner";
 
 export default function CooperativeDashboard() {
@@ -32,11 +33,14 @@ export default function CooperativeDashboard() {
   const handleCertify = async (batchId) => {
     setCertifyingId(batchId);
     try {
-      await certifyBatch(batchId);
+      // Cooperative's own wallet signs & sends certifyBatch() on-chain first.
+      const txHash = await certifyBatchOnChain(batchId);
+      // Then the backend verifies that tx and syncs Postgres.
+      await certifyBatch(batchId, { txHash });
       toast.success(`Batch ${batchId} certified`);
       setBatches((prev) => prev.filter((b) => b.batchId !== batchId));
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Could not certify batch");
+      toast.error(err?.message || err?.response?.data?.message || "Could not certify batch");
     } finally {
       setCertifyingId(null);
     }

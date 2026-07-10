@@ -90,6 +90,7 @@ public class UserService {
                 .dateOfBirth(user.getDateOfBirth())
                 .profilePicturePath(user.getProfilePicturePath())
                 .token(token)
+                .walletAddress(user.getWalletAddress())
                 .build();
     }
 }

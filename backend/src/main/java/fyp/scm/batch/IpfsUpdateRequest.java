@@ -6,8 +6,6 @@ import lombok.Data;
 @Data
 public class IpfsUpdateRequest {
 
-    @NotBlank(message = "IPFS hash is required")
-    private String ipfsHash;
-
-    private String aiResult;
+    @NotBlank(message = "Transaction hash is required")
+    private String txHash;
 }

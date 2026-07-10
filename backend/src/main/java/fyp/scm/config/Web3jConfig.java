@@ -31,7 +31,7 @@ public class Web3jConfig {
 
     @Bean
     public ContractGasProvider contractGasProvider() {
-        // Adjust these values based on your actual transaction needs
+
         // For many networks, 1,000,000 to 3,000,000 is sufficient
         BigInteger gasLimit = BigInteger.valueOf(1_500_000); // Lower than 9,000,000
         BigInteger gasPrice = BigInteger.valueOf(4_100_000_000L);

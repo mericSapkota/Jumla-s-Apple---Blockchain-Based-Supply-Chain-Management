@@ -22,11 +22,28 @@ import org.web3j.tx.gas.ContractGasProvider;
 import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  IMPORTANT: this service no longer signs or sends any batch-mutating
+//  transaction itself. Every farmer/cooperative/transporter action is signed
+//  and sent by the USER'S OWN MetaMask wallet in the browser (see the
+//  frontend's src/blockchain/batchContract.js). Roles are enforced by the
+//  smart contract's onlyRole(msg.sender) checks against that wallet.
+//
+//  What this service does instead, for every mutating action:
+//    1. Look up the transaction receipt for the txHash the frontend sends
+//       and make sure it succeeded and actually hit our contract.
+//    2. Re-read the authoritative state straight off the contract (never
+//       trust batch fields from the request body) and mirror it into
+//       Postgres for fast queries / dashboards.
+//
+//  `web3j`/`credentials` here are the backend's OWN key, used only for
+//  read-only `view` calls (which don't check msg.sender), never for
+//  sending transactions on a user's behalf.
+// ─────────────────────────────────────────────────────────────────────────────
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -42,189 +59,123 @@ public class BatchService {
     @Value("${web3j.contract-address}")
     private String contractAddress;
 
-    // ─── Load the Web3j contract wrapper ─────────────────────────────────────
-    // NOTE: AppleBatch is the Web3j-generated wrapper class.
-    // Generate it with: web3j generate solidity -a artifacts/AppleBatch.json -o src/main/java -p com.jumla.supplychain.contract
-    // For now this method loads the contract at the configured address.
+
     private AppleBatch loadContract() {
         return AppleBatch.load(contractAddress, web3j, credentials, gasProvider);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  FARMER — Create Batch
+    //  FARMER — Create Batch (tx already sent by the farmer's own wallet)
     // ─────────────────────────────────────────────────────────────────────────
     @Transactional
     public BatchResponse createBatch(CreateBatchRequest req, String farmerEmail) {
         User farmer = userRepository.findByEmail(farmerEmail)
                 .orElseThrow(() -> new RuntimeException("Farmer not found"));
 
-        // Generate unique batch ID
-        String batchId = generateBatchId();
-
-        // Parse harvest date
-        LocalDateTime harvestDate = LocalDateTime.parse(
-                req.getHarvestDate(), DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-        BigInteger harvestTimestamp = BigInteger.valueOf(
-                harvestDate.toEpochSecond(ZoneOffset.UTC));
-
-        String aiResult = req.getAiResult() != null ? req.getAiResult() : "PENDING";
-        String ipfsHash = req.getIpfsHash() != null ? req.getIpfsHash() : "";
-
-        try {
-            // ── Call smart contract ──────────────────────────────────────────
-            AppleBatch contract = loadContract();
-            TransactionReceipt receipt = contract.createBatch(
-                    batchId,
-                    farmer.getFullName(),
-                    req.getFarmLocation(),
-                    req.getAppleVariety(),
-                    BigInteger.valueOf(req.getWeightKg()),
-                    harvestTimestamp,
-                    ipfsHash,
-                    aiResult
-            ).send();
-
-            log.info("Batch {} created on blockchain. TxHash: {}", batchId, receipt.getTransactionHash());
-
-            // ── Save to PostgreSQL ───────────────────────────────────────────
-            BatchEntity entity = BatchEntity.builder()
-                    .batchId(batchId)
-                    .farmerEmail(farmerEmail)
-                    .farmerName(farmer.getFullName())
-                    .farmLocation(req.getFarmLocation())
-                    .appleVariety(req.getAppleVariety())
-                    .weightKg(req.getWeightKg())
-                    .harvestDate(harvestDate)
-                    .status(BatchStatus.HARVESTED)
-                    .aiResult(aiResult)
-                    .ipfsHash(ipfsHash)
-                    .photoPath(req.getPhotoPath())
-                    .txHashCreate(receipt.getTransactionHash())
-                    .build();
-
-            batchRepository.save(entity);
-
-            logTransaction(farmerEmail, farmer.getRole().name(), batchId,
-                    BlockchainTransactionLog.TransactionType.CREATE_BATCH, receipt.getTransactionHash());
-
-            return mapToResponse(entity, null);
-
-        } catch (Exception e) {
-            log.error("Failed to create batch on blockchain: {}", e.getMessage());
-            throw new RuntimeException("Blockchain transaction failed: " + e.getMessage());
+        if (batchRepository.existsByBatchId(req.getBatchId())) {
+            throw new RuntimeException("Batch " + req.getBatchId() + " has already been recorded");
         }
+
+        verifyOnChainSuccess(req.getTxHash());
+
+        Tuple12<String, String, String, String, BigInteger, BigInteger, BigInteger, BigInteger,
+                String, BigInteger, String, String> chainData = fetchBatchFromChain(req.getBatchId());
+
+        BatchEntity entity = BatchEntity.builder()
+                .batchId(req.getBatchId())
+                .farmerEmail(farmerEmail)
+                .farmerName(chainData.component2())
+                .farmLocation(chainData.component3())
+                .appleVariety(chainData.component4())
+                .weightKg(chainData.component5().longValue())
+                .harvestDate(toLocalDateTime(chainData.component6()))
+                .status(statusFromChain(chainData.component7()))
+                .destination(chainData.component9())
+                .ipfsHash(chainData.component11())
+                .aiResult(chainData.component12())
+                .photoPath(req.getPhotoPath())
+                .txHashCreate(req.getTxHash())
+                .build();
+
+        batchRepository.save(entity);
+
+        log.info("Batch {} confirmed on-chain and mirrored to Postgres. TxHash: {}",
+                req.getBatchId(), req.getTxHash());
+
+        logTransaction(farmerEmail, farmer.getRole().name(), req.getBatchId(),
+                BlockchainTransactionLog.TransactionType.CREATE_BATCH, req.getTxHash());
+
+        return mapToResponse(entity, null);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  COOPERATIVE — Certify Batch
+    //  COOPERATIVE — Certify Batch (tx already sent by the cooperative's wallet)
     // ─────────────────────────────────────────────────────────────────────────
     @Transactional
-    public BatchResponse certifyBatch(String batchId, String cooperativeEmail) {
+    public BatchResponse certifyBatch(String batchId, TxHashRequest req, String cooperativeEmail) {
         BatchEntity entity = getBatchEntityOrThrow(batchId);
 
-        if (entity.getStatus() != BatchStatus.HARVESTED) {
-            throw new RuntimeException("Batch must be in HARVESTED status to certify");
+        verifyOnChainSuccess(req.getTxHash());
+        syncEntityFromChain(entity, batchId);
+
+        if (entity.getStatus() != BatchStatus.CERTIFIED) {
+            throw new RuntimeException("On-chain status is not CERTIFIED yet — transaction may still be pending");
         }
+        entity.setTxHashCertify(req.getTxHash());
+        batchRepository.save(entity);
 
-        try {
-            AppleBatch contract = loadContract();
-            TransactionReceipt receipt = contract.certifyBatch(batchId).send();
+        logTransaction(cooperativeEmail, "COOPERATIVE", batchId,
+                BlockchainTransactionLog.TransactionType.CERTIFY_BATCH, req.getTxHash());
 
-            log.info("Batch {} certified on blockchain. TxHash: {}", batchId, receipt.getTransactionHash());
-
-            entity.setStatus(BatchStatus.CERTIFIED);
-            entity.setTxHashCertify(receipt.getTransactionHash());
-            batchRepository.save(entity);
-
-            logTransaction(cooperativeEmail, "COOPERATIVE", batchId,
-                    BlockchainTransactionLog.TransactionType.CERTIFY_BATCH, receipt.getTransactionHash());
-
-            return mapToResponse(entity, null);
-
-        } catch (Exception e) {
-            log.error("Failed to certify batch {}: {}", batchId, e.getMessage());
-            throw new RuntimeException("Blockchain transaction failed: " + e.getMessage());
-        }
+        return mapToResponse(entity, null);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  TRANSPORTER — Update Transit
+    //  TRANSPORTER — Update Transit (tx already sent by the transporter's wallet)
     // ─────────────────────────────────────────────────────────────────────────
     @Transactional
     public BatchResponse updateTransit(String batchId, TransitUpdateRequest req, String transporterEmail) {
         BatchEntity entity = getBatchEntityOrThrow(batchId);
 
-        if (entity.getStatus() != BatchStatus.CERTIFIED &&
-                entity.getStatus() != BatchStatus.IN_TRANSIT) {
-            throw new RuntimeException("Batch must be CERTIFIED or IN_TRANSIT to update transit");
+        verifyOnChainSuccess(req.getTxHash());
+        syncEntityFromChain(entity, batchId);
+
+        if (entity.getTxHashTransit() == null) {
+            entity.setTxHashTransit(req.getTxHash());
         }
+        batchRepository.save(entity);
 
-        String destination = req.getDestination() != null
-                ? req.getDestination()
-                : (entity.getDestination() != null ? entity.getDestination() : "");
+        logTransaction(transporterEmail, "TRANSPORTER", batchId,
+                BlockchainTransactionLog.TransactionType.UPDATE_TRANSIT, req.getTxHash());
 
-        try {
-            AppleBatch contract = loadContract();
-            TransactionReceipt receipt = contract.updateTransit(
-                    batchId, req.getLocation(), destination).send();
-
-            log.info("Transit updated for batch {}. Location: {}. TxHash: {}",
-                    batchId, req.getLocation(), receipt.getTransactionHash());
-
-            // First transit call — promote status
-            if (entity.getStatus() == BatchStatus.CERTIFIED) {
-                entity.setStatus(BatchStatus.IN_TRANSIT);
-                entity.setDestination(destination);
-                entity.setTxHashTransit(receipt.getTransactionHash());
-            }
-
-            batchRepository.save(entity);
-
-            logTransaction(transporterEmail, "TRANSPORTER", batchId,
-                    BlockchainTransactionLog.TransactionType.UPDATE_TRANSIT, receipt.getTransactionHash());
-
-            return mapToResponse(entity, null);
-
-        } catch (Exception e) {
-            log.error("Failed to update transit for batch {}: {}", batchId, e.getMessage());
-            throw new RuntimeException("Blockchain transaction failed: " + e.getMessage());
-        }
+        List<BatchResponse.TransitCheckpoint> history = getTransitHistoryFromChain(batchId);
+        return mapToResponse(entity, history);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  TRANSPORTER — Deliver Batch
+    //  TRANSPORTER — Deliver Batch (tx already sent by the transporter's wallet)
     // ─────────────────────────────────────────────────────────────────────────
     @Transactional
-    public BatchResponse deliverBatch(String batchId, String transporterEmail) {
+    public BatchResponse deliverBatch(String batchId, TxHashRequest req, String transporterEmail) {
         BatchEntity entity = getBatchEntityOrThrow(batchId);
 
-        if (entity.getStatus() != BatchStatus.IN_TRANSIT) {
-            throw new RuntimeException("Batch must be IN_TRANSIT to mark as delivered");
+        verifyOnChainSuccess(req.getTxHash());
+        syncEntityFromChain(entity, batchId);
+
+        if (entity.getStatus() != BatchStatus.DELIVERED) {
+            throw new RuntimeException("On-chain status is not DELIVERED yet — transaction may still be pending");
         }
+        entity.setTxHashDeliver(req.getTxHash());
+        batchRepository.save(entity);
 
-        try {
-            AppleBatch contract = loadContract();
-            TransactionReceipt receipt = contract.deliverBatch(batchId).send();
+        logTransaction(transporterEmail, "TRANSPORTER", batchId,
+                BlockchainTransactionLog.TransactionType.DELIVER_BATCH, req.getTxHash());
 
-            log.info("Batch {} delivered. TxHash: {}", batchId, receipt.getTransactionHash());
-
-            entity.setStatus(BatchStatus.DELIVERED);
-            entity.setTxHashDeliver(receipt.getTransactionHash());
-            batchRepository.save(entity);
-
-            logTransaction(transporterEmail, "TRANSPORTER", batchId,
-                    BlockchainTransactionLog.TransactionType.DELIVER_BATCH, receipt.getTransactionHash());
-
-            return mapToResponse(entity, null);
-
-        } catch (Exception e) {
-            log.error("Failed to deliver batch {}: {}", batchId, e.getMessage());
-            throw new RuntimeException("Blockchain transaction failed: " + e.getMessage());
-        }
+        return mapToResponse(entity, null);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  FARMER — Update IPFS Hash (after photo upload)
+    //  FARMER — Update IPFS Hash (tx already sent by the farmer's own wallet)
     // ─────────────────────────────────────────────────────────────────────────
     @Transactional
     public BatchResponse updateIpfsHash(String batchId, IpfsUpdateRequest req, String farmerEmail) {
@@ -234,22 +185,11 @@ public class BatchService {
             throw new RuntimeException("Only the batch owner can update the IPFS hash");
         }
 
-        try {
-            AppleBatch contract = loadContract();
-            contract.updateIPFSHash(batchId, req.getIpfsHash()).send();
+        verifyOnChainSuccess(req.getTxHash());
+        syncEntityFromChain(entity, batchId);
+        batchRepository.save(entity);
 
-            entity.setIpfsHash(req.getIpfsHash());
-            if (req.getAiResult() != null) {
-                entity.setAiResult(req.getAiResult());
-            }
-            batchRepository.save(entity);
-
-            return mapToResponse(entity, null);
-
-        } catch (Exception e) {
-            log.error("Failed to update IPFS hash for batch {}: {}", batchId, e.getMessage());
-            throw new RuntimeException("Blockchain transaction failed: " + e.getMessage());
-        }
+        return mapToResponse(entity, null);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -291,6 +231,58 @@ public class BatchService {
     private BatchEntity getBatchEntityOrThrow(String batchId) {
         return batchRepository.findByBatchId(batchId)
                 .orElseThrow(() -> new RuntimeException("Batch not found: " + batchId));
+    }
+
+    /** Confirms a client-submitted tx hash actually succeeded against our contract. */
+    private void verifyOnChainSuccess(String txHash) {
+        try {
+            TransactionReceipt receipt = web3j.ethGetTransactionReceipt(txHash).send()
+                    .getTransactionReceipt()
+                    .orElseThrow(() -> new RuntimeException(
+                            "Transaction not found or not yet mined: " + txHash));
+
+            if (!receipt.isStatusOK()) {
+                throw new RuntimeException("On-chain transaction failed (reverted): " + txHash);
+            }
+            if (receipt.getTo() == null || !receipt.getTo().equalsIgnoreCase(contractAddress)) {
+                throw new RuntimeException("Transaction was not sent to the batch contract");
+            }
+        } catch (RuntimeException re) {
+            throw re;
+        } catch (Exception e) {
+            throw new RuntimeException("Could not verify blockchain transaction: " + e.getMessage());
+        }
+    }
+
+    private Tuple12<String, String, String, String, BigInteger, BigInteger, BigInteger, BigInteger,
+            String, BigInteger, String, String> fetchBatchFromChain(String batchId) {
+        try {
+            return loadContract().getBatch(batchId).send();
+        } catch (Exception e) {
+            throw new RuntimeException("Could not read batch " + batchId + " from chain: " + e.getMessage());
+        }
+    }
+
+    /** Re-reads batch state from the chain and updates the mutable fields on `entity`. */
+    private void syncEntityFromChain(BatchEntity entity, String batchId) {
+        var chainData = fetchBatchFromChain(batchId);
+        entity.setStatus(statusFromChain(chainData.component7()));
+        entity.setDestination(chainData.component9());
+        entity.setIpfsHash(chainData.component11());
+        entity.setAiResult(chainData.component12());
+    }
+
+    private BatchStatus statusFromChain(BigInteger statusOrdinal) {
+        BatchStatus[] values = BatchStatus.values();
+        int idx = statusOrdinal.intValue();
+        if (idx < 0 || idx >= values.length) {
+            throw new RuntimeException("Unknown on-chain batch status: " + idx);
+        }
+        return values[idx];
+    }
+
+    private LocalDateTime toLocalDateTime(BigInteger epochSeconds) {
+        return LocalDateTime.ofEpochSecond(epochSeconds.longValue(), 0, ZoneOffset.UTC);
     }
 
     private List<BatchResponse.TransitCheckpoint> getTransitHistoryFromChain(String batchId) {
@@ -344,8 +336,8 @@ public class BatchService {
                 .build();
     }
 
-    private String generateBatchId() {
-        // Format: JML-2025-XXXX (year + 4 random hex chars)
+    /** Format: JML-2025-XXXX (year + 4 random hex chars). Public so the frontend can request one. */
+    public String generateBatchId() {
         int year = LocalDateTime.now().getYear();
         String suffix = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
         String candidate = "JML-" + year + "-" + suffix;

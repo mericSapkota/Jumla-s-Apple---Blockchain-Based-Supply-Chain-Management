@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/batch")
@@ -17,9 +18,19 @@ public class BatchController {
 
     private final BatchService batchService;
 
+    // ── GET /api/batch/next-id ──────────────────────────────────────────────
+    // Role: FARMER
+    // Hands out a unique candidate batch ID for the frontend to use in its
+    // MetaMask-signed createBatch() call, before anything is persisted here.
+    @GetMapping("/next-id")
+    public ResponseEntity<Map<String, String>> nextBatchId() {
+        return ResponseEntity.ok(Map.of("batchId", batchService.generateBatchId()));
+    }
+
     // ── POST /api/batch/create ─────────────────────────────────────────────
     // Role: FARMER
-    // Creates a new apple batch in DB + on blockchain
+    // The farmer's own wallet already sent createBatch() on-chain. This just
+    // verifies the tx and mirrors the on-chain record into Postgres.
     @PostMapping("/create")
     public ResponseEntity<BatchResponse> createBatch(
             @RequestBody @Valid CreateBatchRequest req,
@@ -31,17 +42,18 @@ public class BatchController {
 
     // ── PUT /api/batch/certify/{id} ────────────────────────────────────────
     // Role: COOPERATIVE
-    // Certifies a HARVESTED batch
+    // Verifies the cooperative's own certifyBatch() tx and syncs status.
     @PutMapping("/certify/{batchId}")
     public ResponseEntity<BatchResponse> certifyBatch(
             @PathVariable String batchId,
+            @RequestBody @Valid TxHashRequest req,
             @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(batchService.certifyBatch(batchId, userDetails.getUsername()));
+        return ResponseEntity.ok(batchService.certifyBatch(batchId, req, userDetails.getUsername()));
     }
 
     // ── PUT /api/batch/transit/{id} ────────────────────────────────────────
     // Role: TRANSPORTER
-    // Logs a transit checkpoint (first call also moves status to IN_TRANSIT)
+    // Verifies the transporter's own updateTransit() tx and syncs status.
     @PutMapping("/transit/{batchId}")
     public ResponseEntity<BatchResponse> updateTransit(
             @PathVariable String batchId,
@@ -53,12 +65,13 @@ public class BatchController {
 
     // ── PUT /api/batch/deliver/{id} ────────────────────────────────────────
     // Role: TRANSPORTER
-    // Marks batch as DELIVERED
+    // Verifies the transporter's own deliverBatch() tx and syncs status.
     @PutMapping("/deliver/{batchId}")
     public ResponseEntity<BatchResponse> deliverBatch(
             @PathVariable String batchId,
+            @RequestBody @Valid TxHashRequest req,
             @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(batchService.deliverBatch(batchId, userDetails.getUsername()));
+        return ResponseEntity.ok(batchService.deliverBatch(batchId, req, userDetails.getUsername()));
     }
 
     // ── PUT /api/batch/ipfs/{id} ───────────────────────────────────────────

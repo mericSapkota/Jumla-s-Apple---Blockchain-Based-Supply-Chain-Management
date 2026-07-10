@@ -1,10 +1,12 @@
 import TopAppBar from "./TopAppBar";
+import WalletConnectBanner from "../wallet/WalletConnectBanner";
 
 export default function DashboardShell({ title, eyebrow, heading, children }) {
   return (
     <div className="min-h-screen bg-surface pb-16">
       <TopAppBar title={title} />
       <main className="pt-24 px-4 sm:px-6 pb-12 max-w-2xl mx-auto space-y-8">
+        <WalletConnectBanner />
         {(eyebrow || heading) && (
           <section className="space-y-1">
             {eyebrow && (

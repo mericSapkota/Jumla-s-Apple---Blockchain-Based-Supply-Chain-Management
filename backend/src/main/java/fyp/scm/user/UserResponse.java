@@ -19,4 +19,5 @@ public class UserResponse {
     private LocalDate dateOfBirth;
     private String profilePicturePath; // relative path only, e.g. "/uploads/profiles/abc.jpg"
     private String token; // only populated when a new token was issued (email change)
+    private String walletAddress; // linked MetaMask wallet, null if not connected yet
 }

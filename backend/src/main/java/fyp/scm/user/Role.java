@@ -5,5 +5,8 @@ public enum Role {
     FARMER,
     COOPERATIVE,
     TRANSPORTER,
-    CONSUMER
+    CONSUMER,
+    // Not self-registerable — seeded at startup by AdminSeeder and rejected
+    // by AuthService.register.
+    SUPERADMIN
 }

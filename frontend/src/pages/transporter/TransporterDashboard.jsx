@@ -10,6 +10,7 @@ import Button from "../../components/ui/Button";
 import Icon from "../../components/ui/Icon";
 import { transitUpdateSchema } from "../../schemas/batchSchemas";
 import { getBatchesByStatus, updateTransit, deliverBatch } from "../../api/batchApi";
+import { updateTransitOnChain, deliverBatchOnChain } from "../../blockchain/batchContract";
 import CertificateBanner from "../../components/certificate/CertificateBanner";
 
 function TransitForm({ batch, onUpdated }) {
@@ -25,12 +26,15 @@ function TransitForm({ batch, onUpdated }) {
 
   const onSubmit = async (values) => {
     try {
-      const updated = await updateTransit(batch.batchId, values);
+      // Transporter's own wallet signs & sends updateTransit() on-chain first.
+      const txHash = await updateTransitOnChain(batch.batchId, values.location, values.destination || "");
+      // Then the backend verifies that tx and re-syncs Postgres from chain.
+      const updated = await updateTransit(batch.batchId, { txHash });
       toast.success(`Checkpoint logged for ${batch.batchId}`);
       reset({ location: "", destination: values.destination });
       onUpdated(updated);
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Could not update transit");
+      toast.error(err?.message || err?.response?.data?.message || "Could not update transit");
     }
   };
 
@@ -86,11 +90,14 @@ export default function TransporterDashboard() {
   const handleDeliver = async (batchId) => {
     setDeliveringId(batchId);
     try {
-      await deliverBatch(batchId);
+      // Transporter's own wallet signs & sends deliverBatch() on-chain first.
+      const txHash = await deliverBatchOnChain(batchId);
+      // Then the backend verifies that tx and syncs Postgres.
+      await deliverBatch(batchId, { txHash });
       toast.success(`Batch ${batchId} marked delivered`);
       setBatches((prev) => prev.filter((b) => b.batchId !== batchId));
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Could not mark delivered");
+      toast.error(err?.message || err?.response?.data?.message || "Could not mark delivered");
     } finally {
       setDeliveringId(null);
     }

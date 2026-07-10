@@ -21,6 +21,12 @@ export const registerUser = (payload, profilePictureFile = null) => {
 
 export const loginUser = (payload) => axiosClient.post("/api/auth/login", payload).then((res) => res.data);
 
+export const verifyEmail = (token) =>
+  axiosClient.get("/api/auth/verify-email", { params: { token } }).then((res) => res.data);
+
+export const resendVerification = (email) =>
+  axiosClient.post("/api/auth/resend-verification", null, { params: { email } }).then((res) => res.data);
+
 /** Replace the logged-in user's profile picture. */
 export const updateProfilePicture = (file) => {
   const formData = new FormData();

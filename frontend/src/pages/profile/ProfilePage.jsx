@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 import { getMyProfile, updateProfile, changePassword } from "../../api/userApi";
 import { updateProfilePicture } from "../../api/authApi";
+import { getWalletStatus, retryRoleAssignment } from "../../api/walletApi";
+import { connectAndLinkWallet } from "../../blockchain/walletLink";
 import { updateProfileSchema, changePasswordSchema } from "../../schemas/profileSchemas";
 import { useAuth } from "../../auth/AuthContext";
 import Input from "../../components/ui/Input";
@@ -12,17 +14,61 @@ import TopAppBar from "../../components/layout/TopAppBar";
 import Icon from "../../components/ui/Icon";
 
 export default function ProfilePage() {
-  const { updateUserInfo } = useAuth();
+  const { user, updateUserInfo } = useAuth();
   const [loading, setLoading] = useState(true);
   const [profilePicturePath, setProfilePicturePath] = useState(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileInputRef = useRef(null);
 
+  const [walletStatus, setWalletStatus] = useState(null);
+  const [walletBusy, setWalletBusy] = useState(false);
+
+  const refreshWalletStatus = () => {
+    getWalletStatus()
+      .then(setWalletStatus)
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshWalletStatus();
+  }, []);
+
+  const handleConnectWallet = async () => {
+    setWalletBusy(true);
+    try {
+      const result = await connectAndLinkWallet(user.email);
+      if (result.roleAssignedOnChain) {
+        toast.success("Wallet connected and role assigned on-chain!");
+      } else {
+        toast.error(result.warning || "Wallet linked, but role assignment failed.");
+      }
+      refreshWalletStatus();
+    } catch (err) {
+      toast.error(err.message || "Could not connect wallet");
+    } finally {
+      setWalletBusy(false);
+    }
+  };
+
+  const handleRetryRole = async () => {
+    setWalletBusy(true);
+    try {
+      await retryRoleAssignment();
+      toast.success("Role assigned on-chain!");
+      refreshWalletStatus();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Retry failed");
+    } finally {
+      setWalletBusy(false);
+    }
+  };
+
   const profileForm = useForm({ resolver: zodResolver(updateProfileSchema) });
   const passwordForm = useForm({ resolver: zodResolver(changePasswordSchema) });
 
   useEffect(() => {
+    console.log("getting profile");
     getMyProfile()
       .then(({ data }) => {
         profileForm.reset({
@@ -37,14 +83,21 @@ export default function ProfilePage() {
   }, []);
 
   const onSubmitProfile = async (values) => {
+    console.log("1st");
     try {
+      console.log("uoloading");
       const { data } = await updateProfile(values);
+      console.log(data, "data");
       if (data.token) localStorage.setItem("jumla_token", data.token);
       updateUserInfo({ fullName: data.fullName, email: data.email, token: data.token });
+      console.log(data, "Updated profile data");
       toast.success("Profile updated.");
     } catch (err) {
+      a;
+      console.log("failed");
       toast.error(err.response?.data?.message || "Failed to update profile.");
     }
+    console.log("end");
   };
 
   const onSubmitPassword = async (values) => {
@@ -63,10 +116,13 @@ export default function ProfilePage() {
     setPreviewUrl(URL.createObjectURL(file));
     setPhotoUploading(true);
     try {
-      const { data } = await updateProfilePicture(file);
+      const data = await updateProfilePicture(file);
+      console.log("ujploading");
+      console.log(data, "data");
       setProfilePicturePath(data.profilePicturePath);
       toast.success("Profile picture updated.");
     } catch (err) {
+      console.log("failed");
       toast.error("Failed to upload photo.");
       setPreviewUrl(null);
     } finally {
@@ -165,6 +221,59 @@ export default function ProfilePage() {
             Update Password
           </Button>
         </form>
+      </section>
+      {/* ── Blockchain Wallet ── */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-serif text-primary">Blockchain Wallet</h2>
+        <div className="bg-surface-container-low rounded-2xl p-5 space-y-3 border border-outline-variant/10">
+          {walletStatus?.linked ? (
+            <>
+              <div className="flex items-center gap-2">
+                <Icon name="account_balance_wallet" className="text-primary" />
+                <p className="text-sm font-mono break-all">{walletStatus.walletAddress}</p>
+              </div>
+              <p className="text-xs text-on-surface-variant">
+                On-chain role: <span className="font-bold">{walletStatus.onChainRole}</span> · Account role:{" "}
+                <span className="font-bold">{walletStatus.offChainRole}</span>
+              </p>
+              {Number(walletStatus.onChainRole) !== { FARMER: 1, COOPERATIVE: 2, TRANSPORTER: 3, CONSUMER: 4 }[
+                walletStatus.offChainRole
+              ] && (
+                <>
+                  <p className="text-xs text-error">
+                    Your wallet's on-chain role doesn't match your account role yet — blockchain actions will fail
+                    until this is fixed.
+                  </p>
+                  <Button
+                    variant="accent"
+                    icon="sync"
+                    loading={walletBusy}
+                    onClick={handleRetryRole}
+                    className="!py-2 !px-4 text-xs"
+                  >
+                    Retry role assignment
+                  </Button>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-on-surface-variant">
+                Link a MetaMask wallet so you can sign your own blockchain actions (create, certify, transit,
+                deliver) as a {user?.role?.toLowerCase()}.
+              </p>
+              <Button
+                variant="primary"
+                icon="link"
+                loading={walletBusy}
+                onClick={handleConnectWallet}
+                className="!py-2.5 !px-5 text-xs"
+              >
+                Connect MetaMask
+              </Button>
+            </>
+          )}
+        </div>
       </section>
     </div>
   );

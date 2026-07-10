@@ -9,6 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -44,6 +45,26 @@ public class User implements UserDetails {
     // The actual image file lives on the FRONTEND, not the backend —
     // see FileStorageService for where it is physically written.
     private String profilePicturePath;
+
+    // MetaMask wallet linked to this account. Lowercased hex address, unique.
+    // This is the address that will actually sign on-chain transactions —
+    // see WalletService for how it gets linked and role-assigned.
+    @Column(unique = true)
+    private String walletAddress;
+
+    // Set once the user clicks the link in their verification email.
+    // Login is blocked until this is true — see AuthService.login.
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean emailVerified = false;
+
+    private String verificationToken;
+
+    private Instant verificationTokenExpiry;
+
+    // Nullable for accounts created before this column existed.
+    @Builder.Default
+    private Instant createdAt = Instant.now();
 
     // ── UserDetails impl ──────────────────────────
     @Override

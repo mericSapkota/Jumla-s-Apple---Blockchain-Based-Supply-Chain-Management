@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { registerSchema, ROLES } from "../schemas/authSchemas";
-import { useAuth, roleHomePath } from "../auth/AuthContext";
+import { useAuth } from "../auth/AuthContext";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import Icon from "../components/ui/Icon";
@@ -51,8 +51,8 @@ export default function RegisterPage() {
       const { profilePicture: _ignored, ...jsonPayload } = values;
 
       const data = await registerUser(jsonPayload, profilePictureFile);
-      toast.success(`Welcome to Jumla Trace, ${data.fullName}`);
-      navigate(roleHomePath(data.role));
+      toast.success(data.message || "Registration successful. Please check your email to verify your account.");
+      navigate("/login");
     } catch (err) {
       const message = err?.response?.data?.message || "Could not register. Try a different email.";
       toast.error(message);

@@ -41,9 +41,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   const register = useCallback(async (payload, profilePictureFile = null) => {
-    const data = await registerUser(payload, profilePictureFile);
-    persist(data);
-    return data;
+    // No token comes back until the email is verified, so this only creates
+    // the account — it does not log the user in.
+    return registerUser(payload, profilePictureFile);
   }, []);
 
   const logout = useCallback(() => {
@@ -102,6 +102,8 @@ export function roleHomePath(role) {
       return "/transporter/dashboard";
     case "CONSUMER":
       return "/consumer/scan";
+    case "SUPERADMIN":
+      return "/admin/dashboard";
     default:
       return "/login";
   }
