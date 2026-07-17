@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { getMyProfile, updateProfile, changePassword } from "../../api/userApi";
 import { updateProfilePicture } from "../../api/authApi";
 import { getWalletStatus, retryRoleAssignment } from "../../api/walletApi";
-import { connectAndLinkWallet } from "../../blockchain/walletLink";
+import { connectAndLinkWallet, disconnectWallet } from "../../blockchain/walletLink";
 import { updateProfileSchema, changePasswordSchema } from "../../schemas/profileSchemas";
 import { useAuth } from "../../auth/AuthContext";
 import Input from "../../components/ui/Input";
@@ -64,6 +64,20 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDisconnectWallet = async () => {
+    if (!window.confirm("Disconnect this wallet? You can then connect a different MetaMask account.")) return;
+    setWalletBusy(true);
+    try {
+      await disconnectWallet();
+      toast.success("Wallet disconnected. Connect again to link another account.");
+      refreshWalletStatus();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err.message || "Could not disconnect wallet");
+    } finally {
+      setWalletBusy(false);
+    }
+  };
+
   const profileForm = useForm({ resolver: zodResolver(updateProfileSchema) });
   const passwordForm = useForm({ resolver: zodResolver(changePasswordSchema) });
 
@@ -93,7 +107,6 @@ export default function ProfilePage() {
       console.log(data, "Updated profile data");
       toast.success("Profile updated.");
     } catch (err) {
-      a;
       console.log("failed");
       toast.error(err.response?.data?.message || "Failed to update profile.");
     }
@@ -254,6 +267,20 @@ export default function ProfilePage() {
                   </Button>
                 </>
               )}
+              <div className="pt-1">
+                <Button
+                  variant="danger"
+                  icon="link_off"
+                  loading={walletBusy}
+                  onClick={handleDisconnectWallet}
+                  className="!py-2 !px-4 text-xs"
+                >
+                  Disconnect wallet
+                </Button>
+                <p className="text-xs text-on-surface-variant mt-2">
+                  Disconnects this wallet so you can connect a different MetaMask account.
+                </p>
+              </div>
             </>
           ) : (
             <>

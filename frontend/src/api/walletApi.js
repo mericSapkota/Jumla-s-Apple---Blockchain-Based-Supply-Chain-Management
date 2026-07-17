@@ -8,3 +8,6 @@ export const retryRoleAssignment = () =>
 
 export const getWalletStatus = () =>
   axiosClient.get("/api/users/me/wallet/status").then((res) => res.data);
+
+export const unlinkWallet = () =>
+  axiosClient.delete("/api/users/me/wallet").then((res) => res.data);

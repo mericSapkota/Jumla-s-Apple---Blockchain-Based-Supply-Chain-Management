@@ -16,9 +16,14 @@ axiosClient.interceptors.request.use((config) => {
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    const status = error?.response?.status;
     const isAuthCall = error?.config?.url?.includes("/api/auth/");
     const isProfileCall = error?.config?.url?.includes("/api/users/me");
-    if (!isAuthCall && !isProfileCall) {
+    // Only an expired/invalid session (401/403) should bounce the user to
+    // login. Business/server errors (400/404/500) — e.g. a failed certificate
+    // generation — must surface to the caller as a toast, not log them out.
+    const isAuthFailure = status === 401 || status === 403;
+    if (isAuthFailure && !isAuthCall && !isProfileCall) {
       localStorage.removeItem("jumla_token");
       localStorage.removeItem("jumla_role");
       localStorage.removeItem("jumla_name");

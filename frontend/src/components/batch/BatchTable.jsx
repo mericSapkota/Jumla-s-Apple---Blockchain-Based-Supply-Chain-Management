@@ -32,16 +32,14 @@ export default function BatchTable({ batches, renderActions, emptyMessage = "No 
                     {batch.harvestDate ? new Date(batch.harvestDate).toLocaleDateString() : ""}
                   </div>
                 </td>
-                <td className="px-4 py-5 text-xs text-on-surface-variant">
+                <td className="px-4 py-5 text-xs text-on-surface">
                   {batch.appleVariety} · {batch.weightKg}kg
                   <div className="text-[10px]">{batch.farmLocation}</div>
                 </td>
                 <td className="px-4 py-5">
                   <StatusBadge status={batch.status} />
                 </td>
-                {renderActions && (
-                  <td className="px-4 py-5 text-right whitespace-nowrap">{renderActions(batch)}</td>
-                )}
+                {renderActions && <td className="px-4 py-5 text-right whitespace-nowrap">{renderActions(batch)}</td>}
               </tr>
             ))}
           </tbody>

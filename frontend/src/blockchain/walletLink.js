@@ -1,5 +1,5 @@
-import { requestAccount, getSigner, describeWalletError } from "./contract";
-import { linkWallet } from "../api/walletApi";
+import { requestAccount, getSigner, describeWalletError, revokeWalletPermissions } from "./contract";
+import { linkWallet, unlinkWallet } from "../api/walletApi";
 
 // Must match the backend's WalletService#MESSAGE_PATTERN exactly:
 // it looks for "Email: <email>\nTimestamp: <epochMillis>" anywhere in the
@@ -31,4 +31,14 @@ export async function connectAndLinkWallet(email) {
   } catch (err) {
     throw new Error(err?.response?.data?.message || describeWalletError(err));
   }
+}
+
+/**
+ * Disconnect flow: unlink the wallet from the account server-side, then revoke
+ * this site's MetaMask permission so the next connect prompts the account
+ * picker — letting the user reconnect with a different MetaMask account.
+ */
+export async function disconnectWallet() {
+  await unlinkWallet();
+  await revokeWalletPermissions();
 }

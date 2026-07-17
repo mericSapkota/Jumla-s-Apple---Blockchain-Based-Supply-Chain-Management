@@ -33,6 +33,27 @@ export async function requestAccount() {
   return accounts[0];
 }
 
+/**
+ * Revokes this site's permission to the user's MetaMask accounts, so the next
+ * `eth_requestAccounts` re-opens the account picker instead of silently
+ * reconnecting the same account. Older wallets don't support EIP-2255 — in that
+ * case we just no-op (the user can switch accounts manually in MetaMask).
+ */
+export async function revokeWalletPermissions() {
+  if (!hasMetaMask()) return;
+  try {
+    await window.ethereum.request({
+      method: "wallet_revokePermissions",
+      params: [{ eth_accounts: {} }],
+    });
+  } catch (err) {
+    // -32601 / 4200 = method not supported by this wallet — safe to ignore.
+    if (err?.code !== -32601 && err?.code !== 4200) {
+      console.warn("Could not revoke MetaMask permissions:", err?.message || err);
+    }
+  }
+}
+
 /** Returns the currently connected account without prompting, or null. */
 export async function getConnectedAccount() {
   if (!hasMetaMask()) return null;
