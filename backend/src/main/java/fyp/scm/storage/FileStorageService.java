@@ -44,6 +44,9 @@ public class FileStorageService {
     @Value("${app.upload.blog-url-prefix:/uploads/blogs}")
     private String blogUrlPrefix;
 
+    @Value("${app.upload.batch-url-prefix:/uploads/batches}")
+    private String batchUrlPrefix;
+
     public String storeProfilePicture(MultipartFile file) {
         return store(file, "profiles", urlPrefix, "Profile picture");
     }
@@ -55,6 +58,16 @@ public class FileStorageService {
      */
     public String storeBlogImage(MultipartFile file) {
         return store(file, "blogs", blogUrlPrefix, "Blog cover image");
+    }
+
+    /**
+     * Stores the apple photo a farmer captured for AI freshness verification,
+     * under {frontend-public-dir}/uploads/batches/{uuid}.{ext}. The returned
+     * relative path is saved on the batch so the cooperative and consumers can
+     * see the same picture that was verified.
+     */
+    public String storeBatchImage(MultipartFile file) {
+        return store(file, "batches", batchUrlPrefix, "Apple photo");
     }
 
     private String store(MultipartFile file, String subDir, String returnedPrefix, String label) {

@@ -3,6 +3,8 @@ package fyp.scm.chat;
 import fyp.scm.chat.dto.ChatMessageResponse;
 import fyp.scm.chat.dto.ConversationSummary;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,6 +30,19 @@ public class AdminChatController {
     @GetMapping("/conversations/{sessionId}")
     public List<ChatMessageResponse> conversation(@PathVariable String sessionId) {
         return chatService.getSessionHistory(sessionId);
+    }
+
+    // Human admin reply — used when the AI is toggled off and a person answers.
+    @PostMapping("/conversations/{sessionId}/reply")
+    public ChatMessageResponse reply(
+            @PathVariable String sessionId,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal UserDetails admin) {
+        String message = body.getOrDefault("message", "").trim();
+        if (message.isEmpty()) {
+            throw new IllegalArgumentException("Reply message cannot be empty");
+        }
+        return chatService.adminReply(sessionId, message, admin.getUsername());
     }
 
     // Current toggle state + whether an API key is actually configured.

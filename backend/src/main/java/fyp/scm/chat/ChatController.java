@@ -31,23 +31,24 @@ public class ChatController {
     }
 
     @PostMapping
-    public ChatMessageResponse send(@Valid @RequestBody ChatRequest request, Authentication auth) {
+    public ResponseEntity<?> send(@Valid @RequestBody ChatRequest request, Authentication auth) {
         String email = null;
         if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
             email = auth.getName();
         }
-        return chatService.sendMessage(request.getSessionId(), request.getMessage(), email);
+        ChatMessageResponse reply = chatService.sendMessage(request.getSessionId(), request.getMessage(), email);
+        // No auto reply means the AI is off — the message is queued for a human
+        // admin. The widget polls the transcript to pick up that reply.
+        if (reply == null) {
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of("status", "pending"));
+        }
+        return ResponseEntity.ok(reply);
     }
 
-    // Lets a returning widget session reload its own transcript.
+    // Lets a returning widget session reload its own transcript (also used for
+    // polling so admin replies show up while the AI is turned off).
     @GetMapping("/{sessionId}")
     public List<ChatMessageResponse> history(@PathVariable String sessionId) {
         return chatService.getSessionHistory(sessionId);
-    }
-
-    @ExceptionHandler(ChatDisabledException.class)
-    public ResponseEntity<Map<String, String>> handleDisabled(ChatDisabledException ex) {
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(Map.of("message", ex.getMessage()));
     }
 }

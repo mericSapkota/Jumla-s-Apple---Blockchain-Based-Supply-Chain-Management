@@ -24,7 +24,7 @@ public class ChatService {
 
     private final ChatRepository chatRepository;
     private final ChatSettingRepository settingRepository;
-    private final AnthropicClient anthropicClient;
+    private final GeminiClient geminiClient;
 
     // ── Visitor-facing ────────────────────────────────────────────────
 
@@ -32,13 +32,16 @@ public class ChatService {
         return getOrCreateSetting().isAiEnabled();
     }
 
+    /**
+     * Stores the visitor's message. When the AI assistant is ON it also generates
+     * and stores a reply and returns it. When the admin has turned the AI OFF the
+     * message is simply queued for a human — this returns {@code null} and a
+     * SUPERADMIN answers manually from the admin Chat tab (the widget polls the
+     * transcript and picks up that reply).
+     */
     @Transactional
     public ChatMessageResponse sendMessage(String sessionId, String message, String userEmail) {
-        if (!isEnabled()) {
-            throw new ChatDisabledException("The AI assistant is currently turned off.");
-        }
-
-        // 1) store the visitor's message
+        // 1) store the visitor's message (always — regardless of AI toggle)
         ChatMessage userMsg = new ChatMessage();
         userMsg.setSessionId(sessionId);
         userMsg.setRole("user");
@@ -46,7 +49,12 @@ public class ChatService {
         userMsg.setUserEmail(userEmail);
         chatRepository.save(userMsg);
 
-        // 2) build the recent history for context
+        // 2) AI off → hand the conversation to a human; no auto reply.
+        if (!isEnabled()) {
+            return null;
+        }
+
+        // 3) build the recent history for context
         List<ChatMessage> thread = chatRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
         List<Map<String, String>> history = new ArrayList<>();
         int start = Math.max(0, thread.size() - HISTORY_LIMIT);
@@ -54,13 +62,13 @@ public class ChatService {
             history.add(Map.of("role", m.getRole(), "content", m.getContent()));
         }
 
-        // 3) ask the model (falls back gracefully if unconfigured / errored)
-        String replyText = anthropicClient.complete(history);
+        // 4) ask the model (falls back gracefully if unconfigured / errored)
+        String replyText = geminiClient.complete(history);
         if (replyText == null || replyText.isBlank()) {
             replyText = FALLBACK_REPLY;
         }
 
-        // 4) store and return the assistant reply
+        // 5) store and return the assistant reply
         ChatMessage assistantMsg = new ChatMessage();
         assistantMsg.setSessionId(sessionId);
         assistantMsg.setRole("assistant");
@@ -69,6 +77,18 @@ public class ChatService {
         chatRepository.save(assistantMsg);
 
         return ChatMessageResponse.from(assistantMsg);
+    }
+
+    /** A human admin's manual reply into a conversation (role "admin"). */
+    @Transactional
+    public ChatMessageResponse adminReply(String sessionId, String message, String adminEmail) {
+        ChatMessage reply = new ChatMessage();
+        reply.setSessionId(sessionId);
+        reply.setRole("admin");
+        reply.setContent(message);
+        reply.setUserEmail(adminEmail);
+        chatRepository.save(reply);
+        return ChatMessageResponse.from(reply);
     }
 
     public List<ChatMessageResponse> getSessionHistory(String sessionId) {
@@ -115,7 +135,7 @@ public class ChatService {
     }
 
     public boolean isAiConfigured() {
-        return anthropicClient.isConfigured();
+        return geminiClient.isConfigured();
     }
 
     // ── helpers ───────────────────────────────────────────────────────

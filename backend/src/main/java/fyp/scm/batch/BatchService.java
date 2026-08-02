@@ -5,6 +5,7 @@ package fyp.scm.batch;
 import fyp.scm.certificate.BlockchainTransactionLog;
 import fyp.scm.certificate.BlockchainTransactionLogRepository;
 import fyp.scm.contract.AppleBatch;
+import fyp.scm.storage.FileStorageService;
 import fyp.scm.user.User;
 import fyp.scm.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +56,7 @@ public class BatchService {
     private final BatchRepository batchRepository;
     private final UserRepository userRepository;
     private final BlockchainTransactionLogRepository transactionLogRepository;
+    private final FileStorageService fileStorageService;
 
     @Value("${web3j.contract-address}")
     private String contractAddress;
@@ -106,6 +108,16 @@ public class BatchService {
                 BlockchainTransactionLog.TransactionType.CREATE_BATCH, req.getTxHash());
 
         return mapToResponse(entity, null);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  FARMER — Upload the AI-verified apple photo (off-chain).
+    //  Called before createBatch(); the returned path is passed back in the
+    //  create request and persisted on the batch so the cooperative and
+    //  consumers can see the same picture that was verified.
+    // ─────────────────────────────────────────────────────────────────────────
+    public String storeBatchPhoto(org.springframework.web.multipart.MultipartFile photo) {
+        return fileStorageService.storeBatchImage(photo);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

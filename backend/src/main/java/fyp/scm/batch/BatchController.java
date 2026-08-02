@@ -3,10 +3,12 @@ package fyp.scm.batch;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,17 @@ public class BatchController {
     @GetMapping("/next-id")
     public ResponseEntity<Map<String, String>> nextBatchId() {
         return ResponseEntity.ok(Map.of("batchId", batchService.generateBatchId()));
+    }
+
+    // ── POST /api/batch/photo ──────────────────────────────────────────────
+    // Role: FARMER
+    // Stores the AI-verified apple photo and returns its relative path. The
+    // farmer includes that path in the subsequent createBatch() call so it is
+    // persisted on the batch (visible to the cooperative and to consumers).
+    @PostMapping(value = "/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> uploadBatchPhoto(
+            @RequestPart("photo") MultipartFile photo) {
+        return ResponseEntity.ok(Map.of("path", batchService.storeBatchPhoto(photo)));
     }
 
     // ── POST /api/batch/create ─────────────────────────────────────────────

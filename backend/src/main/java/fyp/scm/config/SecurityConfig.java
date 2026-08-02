@@ -56,7 +56,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/chat/**").permitAll()
                         // Role protected endpoints
                         .requestMatchers("/api/admin/**").hasRole("SUPERADMIN")
-                        .requestMatchers("/api/batch/create", "/api/batch/next-id").hasRole("FARMER")
+                        .requestMatchers("/api/batch/create", "/api/batch/next-id", "/api/batch/photo").hasRole("FARMER")
                         .requestMatchers("/api/batch/certify/**").hasRole("COOPERATIVE")
                         .requestMatchers("/api/batch/transit/**").hasRole("TRANSPORTER")
                         .requestMatchers("/api/batch/deliver/**").hasRole("TRANSPORTER")
