@@ -3,6 +3,8 @@ import toast from "react-hot-toast";
 import DashboardShell from "../components/layout/DashboardShell";
 import BatchTable from "../components/batch/BatchTable";
 import Button from "../components/ui/Button";
+import Modal from "../components/ui/Modal";
+import QRDisplay from "../components/batch/QRDisplay";
 import { getMyBatches, getAllBatchesAcrossStatuses } from "../api/batchApi";
 import { exportBatchesToExcel } from "../utils/exportExcel";
 import { useAuth } from "../auth/AuthContext";
@@ -12,6 +14,7 @@ export default function BatchHistoryPage() {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [qrBatch, setQrBatch] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -76,8 +79,20 @@ export default function BatchHistoryPage() {
           Loading…
         </div>
       ) : (
-        <BatchTable batches={batches} emptyMessage="No batch transactions yet." />
+        <BatchTable
+          batches={batches}
+          emptyMessage="No batch transactions yet."
+          renderActions={(batch) => (
+            <Button className="!w-auto" onClick={() => setQrBatch(batch)}>
+              View QR
+            </Button>
+          )}
+        />
       )}
+
+      <Modal isOpen={!!qrBatch} onClose={() => setQrBatch(null)}>
+        {qrBatch && <QRDisplay batchId={qrBatch.batchId} size={220} />}
+      </Modal>
     </DashboardShell>
   );
 }

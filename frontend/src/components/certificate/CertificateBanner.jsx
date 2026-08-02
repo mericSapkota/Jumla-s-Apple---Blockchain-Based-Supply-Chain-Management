@@ -75,11 +75,7 @@ export default function CertificateBanner() {
             icon={alreadyIssued ? "download" : "workspace_premium"}
             loading={downloading}
             onClick={handleDownload}
-            className={
-              alreadyIssued
-                ? "bg-on-primary text-primary hover:bg-on-primary/90"
-                : "bg-on-primary text-primary hover:bg-on-primary/90"
-            }
+            className={"bg-white text-primary hover:bg-white"}
           >
             {alreadyIssued ? "Re-download" : "Generate Certificate"}
           </Button>

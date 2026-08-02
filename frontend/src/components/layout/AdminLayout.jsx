@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import Icon from "../ui/Icon";
+import Logo from "../ui/Logo";
 
 const NAV_ITEMS = [
   { key: "overview", label: "Overview", icon: "monitoring" },
@@ -8,6 +9,7 @@ const NAV_ITEMS = [
   { key: "batches", label: "Batches", icon: "package_2" },
   { key: "blogs", label: "Blogs", icon: "article" },
   { key: "donations", label: "Donations", icon: "volunteer_activism" },
+  { key: "chat", label: "AI Chat", icon: "forum" },
 ];
 
 export default function AdminLayout({ active, onNavigate, children }) {
@@ -24,7 +26,7 @@ export default function AdminLayout({ active, onNavigate, children }) {
       {/* Sidebar */}
       <aside className="w-56 shrink-0 bg-surface-container-lowest border-r border-outline-variant/20 flex flex-col">
         <div className="flex items-center gap-2 px-5 py-5">
-          <Icon name="forest" className="text-2xl text-primary" />
+          <Logo size={36} />
           <div>
             <p className="font-headline font-bold text-primary leading-tight">Jumla Trace</p>
             <p className="text-[10px] uppercase tracking-widest text-on-surface-variant">Superadmin</p>

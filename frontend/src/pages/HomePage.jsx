@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "../components/ui/Icon";
+import Logo from "../components/ui/Logo";
 import { useAuth, roleHomePath } from "../auth/AuthContext";
 
 const STEPS = [
@@ -77,7 +78,7 @@ export default function HomePage() {
       <header className="fixed top-0 left-0 w-full z-50 bg-[#fcf9f3]/90 backdrop-blur-xl shadow-card">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
-            <Icon name="forest" className="text-3xl text-primary" />
+            <Logo size={48} />
             <span className="font-headline text-xl font-bold text-primary">Jumla Trace</span>
           </div>
 
@@ -273,7 +274,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="px-6 py-10 border-t border-outline-variant/10 text-center space-y-3">
         <div className="flex items-center justify-center gap-2">
-          <Icon name="forest" className="text-2xl text-primary" />
+          <Logo size={40} />
           <span className="font-headline text-lg font-bold text-primary">Jumla Trace</span>
         </div>
         <p className="text-[11px] uppercase tracking-widest text-on-surface-variant">

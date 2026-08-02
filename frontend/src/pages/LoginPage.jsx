@@ -10,6 +10,7 @@ import GoogleButton from "../components/auth/GoogleButton";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import Icon from "../components/ui/Icon";
+import Logo from "../components/ui/Logo";
 
 export default function LoginPage() {
   const { login, completeAuth } = useAuth();
@@ -102,7 +103,7 @@ export default function LoginPage() {
       <main className="w-full max-w-md relative z-10">
         <header className="text-center mb-10">
           <div className="flex items-center justify-center gap-2 mb-3">
-            <Icon name="forest" className="text-4xl text-primary" />
+            <Logo size={64} />
             <h1 className="font-headline text-4xl font-bold tracking-tight text-primary">
               Jumla Trace
             </h1>

@@ -1,8 +1,8 @@
 {
   "network": "sepolia",
   "contractName": "AppleBatch",
-  "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  "deployerAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  "deployedAt": "2026-07-09T06:34:15.701Z",
-  "transactionHash": "0xab0035b9936df68042ba8a83317543164d07aabb91744ca66d9d125c123d8982"
+  "contractAddress": "0x09fcDAdeaD9182d31D6ac1065C6F1531d2F1C390",
+  "deployerAddress": "0x09f6424824B435814c943be08373e4d2E324F4Eb",
+  "deployedAt": "2026-07-25T11:43:36.894Z",
+  "transactionHash": "0x1329d262133edf53399906e3647006744bd677c4e270936e262fc57ba152a611"
 }

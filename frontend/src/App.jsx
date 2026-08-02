@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./auth/AuthContext";
 import PrivateRoute from "./auth/PrivateRoute";
+import ChatWidget from "./components/chat/ChatWidget";
 
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
@@ -112,7 +113,16 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <ChatWidgetGate />
       </BrowserRouter>
     </AuthProvider>
   );
+}
+
+// The visitor chat widget appears on the public/user-facing site, but not inside
+// the admin dashboard (admins view conversations from the Chat tab instead).
+function ChatWidgetGate() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/admin")) return null;
+  return <ChatWidget />;
 }

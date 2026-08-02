@@ -5,6 +5,7 @@ import UsersTab from "./UsersTab";
 import BatchesTab from "./BatchesTab";
 import BlogsTab from "./BlogsTab";
 import DonationsTab from "./DonationsTab";
+import ChatTab from "./ChatTab";
 
 export default function AdminDashboard() {
   const [tab, setTab] = useState("overview");
@@ -16,6 +17,7 @@ export default function AdminDashboard() {
       {tab === "batches" && <BatchesTab />}
       {tab === "blogs" && <BlogsTab />}
       {tab === "donations" && <DonationsTab />}
+      {tab === "chat" && <ChatTab />}
     </AdminLayout>
   );
 }

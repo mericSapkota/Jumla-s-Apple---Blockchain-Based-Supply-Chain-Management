@@ -52,6 +52,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/batch/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/batch/qr/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/blogs", "/api/blogs/*").permitAll()
+                        // Public AI chat widget (send message, check enabled, load own history)
+                        .requestMatchers("/api/chat/**").permitAll()
                         // Role protected endpoints
                         .requestMatchers("/api/admin/**").hasRole("SUPERADMIN")
                         .requestMatchers("/api/batch/create", "/api/batch/next-id").hasRole("FARMER")

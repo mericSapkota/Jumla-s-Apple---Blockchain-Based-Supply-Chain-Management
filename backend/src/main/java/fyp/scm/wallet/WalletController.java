@@ -34,6 +34,15 @@ public class WalletController {
         return ResponseEntity.ok(walletService.retryRoleAssignment(user.getEmail()));
     }
 
+    // Unlink the wallet from this account so the user can connect a different
+    // MetaMask account. The frontend also revokes MetaMask's site permission so
+    // the next connect re-prompts the account picker.
+    @DeleteMapping
+    public ResponseEntity<Map<String, String>> unlinkWallet(@AuthenticationPrincipal User user) {
+        walletService.unlinkWallet(user.getEmail());
+        return ResponseEntity.ok(Map.of("message", "Wallet disconnected"));
+    }
+
     // Quick status check: linked address + what role the chain currently
     // has recorded for it (0=NONE..4=CONSUMER), so the frontend can warn the
     // user before they try (and fail) a transaction.

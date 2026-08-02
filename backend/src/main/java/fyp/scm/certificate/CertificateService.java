@@ -10,9 +10,11 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
@@ -95,7 +97,9 @@ public class CertificateService {
             try (PDPageContentStream cs = new PDPageContentStream(document, page)) {
                 // Border
                 cs.setLineWidth(3f);
-                cs.setStrokingColor(34, 95, 56); // forest green, matches "Jumla Trace" brand
+                // setStrokingColor(float,float,float) expects 0..1, not 0..255 — use the
+                // java.awt.Color overload so these stay ordinary 0..255 RGB values.
+                cs.setStrokingColor(new Color(34, 95, 56)); // forest green, matches "Jumla Trace" brand
                 cs.addRect(30, 30, pageWidth - 60, pageHeight - 60);
                 cs.stroke();
 
@@ -107,13 +111,25 @@ public class CertificateService {
                 PDType1Font regular = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
                 PDType1Font italic = new PDType1Font(Standard14Fonts.FontName.HELVETICA_OBLIQUE);
 
-                centerText(cs, bold, 22, "JUMLA TRACE", pageWidth, pageHeight - 110);
-                centerText(cs, regular, 11, "Blockchain Apple Supply Chain", pageWidth, pageHeight - 130);
+                // Brand logo, centered above the wordmark
+                try (var logoStream = getClass().getResourceAsStream("/logo.png")) {
+                    if (logoStream != null) {
+                        PDImageXObject logo = PDImageXObject.createFromByteArray(
+                                document, logoStream.readAllBytes(), "logo");
+                        float logoSize = 70f;
+                        cs.drawImage(logo, (pageWidth - logoSize) / 2f, pageHeight - 130f, logoSize, logoSize);
+                    }
+                } catch (IOException e) {
+                    log.warn("Certificate logo could not be embedded: {}", e.getMessage());
+                }
 
-                centerText(cs, bold, 26, "Certificate of Blockchain Participation", pageWidth, pageHeight - 190);
+                centerText(cs, bold, 22, "JUMLA TRACE", pageWidth, pageHeight - 155);
+                centerText(cs, regular, 11, "Blockchain Apple Supply Chain", pageWidth, pageHeight - 173);
 
-                centerText(cs, regular, 12, "This certifies that", pageWidth, pageHeight - 240);
-                centerText(cs, bold, 20, user.getFullName(), pageWidth, pageHeight - 270);
+                centerText(cs, bold, 26, "Certificate of Blockchain Participation", pageWidth, pageHeight - 230);
+
+                centerText(cs, regular, 12, "This certifies that", pageWidth, pageHeight - 280);
+                centerText(cs, bold, 20, user.getFullName(), pageWidth, pageHeight - 310);
 
                 String roleLabel = switch (user.getRole().name()) {
                     case "FARMER" -> "Farmer";
@@ -124,20 +140,20 @@ public class CertificateService {
 
                 centerText(cs, regular, 12,
                         "has successfully completed " + txCount + " verified blockchain transactions",
-                        pageWidth, pageHeight - 305);
+                        pageWidth, pageHeight - 345);
                 centerText(cs, regular, 12,
                         "as a registered " + roleLabel + " on the Jumla Trace network.",
-                        pageWidth, pageHeight - 323);
+                        pageWidth, pageHeight - 363);
 
                 centerText(cs, italic, 10, "Certificate No: " + certificate.getCertificateNumber(),
-                        pageWidth, pageHeight - 380);
+                        pageWidth, pageHeight - 420);
                 centerText(cs, italic, 10,
                         "Issued on: " + certificate.getIssuedAt().format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
-                        pageWidth, pageHeight - 396);
+                        pageWidth, pageHeight - 436);
 
                 centerText(cs, italic, 9,
                         "Verifiable on-chain via the transaction hashes recorded against this account.",
-                        pageWidth, pageHeight - 430);
+                        pageWidth, pageHeight - 470);
             }
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();

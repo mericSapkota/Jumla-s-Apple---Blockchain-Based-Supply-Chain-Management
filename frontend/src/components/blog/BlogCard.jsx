@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import Icon from "../ui/Icon";
+import Logo from "../ui/Logo";
 
 function formatDate(value) {
   const d = new Date(value);
@@ -22,7 +23,7 @@ export default function BlogCard({ blog }) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-fixed to-tertiary-fixed">
-            <Icon name="forest" className="text-5xl text-primary opacity-50" />
+            <Logo size={80} className="opacity-50" />
           </div>
         )}
       </div>

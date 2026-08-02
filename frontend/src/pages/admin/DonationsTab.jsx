@@ -5,8 +5,8 @@ import AdminTable from "./AdminTable";
 import { formatDate } from "../../utils/formatDate";
 
 const STATUS_STYLES = {
-  COMPLETE: "bg-primary-fixed text-on-primary-container",
-  PENDING: "bg-secondary-fixed text-on-secondary-container",
+  COMPLETE: "bg-primary-fixed ",
+  PENDING: "bg-secondary-fixed",
   FAILED: "bg-error-container text-on-error-container",
 };
 
@@ -19,9 +19,7 @@ export default function DonationsTab() {
       .catch(() => toast.error("Could not load donations"));
   }, []);
 
-  const completedTotal = (donations || [])
-    .filter((d) => d.status === "COMPLETE")
-    .reduce((sum, d) => sum + d.amount, 0);
+  const completedTotal = (donations || []).filter((d) => d.status === "COMPLETE").reduce((sum, d) => sum + d.amount, 0);
 
   const columns = [
     {
@@ -41,7 +39,7 @@ export default function DonationsTab() {
       render: (d) => (
         <span
           className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-            STATUS_STYLES[d.status] || "bg-surface-container-high text-on-surface-variant"
+            STATUS_STYLES[d.status] || "bg-surface-container-high text-black"
           }`}
         >
           {d.status}

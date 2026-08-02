@@ -1,3 +1,4 @@
+import toast from "react-hot-toast";
 import { getContractWithSigner, describeWalletError } from "./contract";
 
 // Every function here: (1) sends a transaction signed by the user's own
@@ -7,14 +8,18 @@ import { getContractWithSigner, describeWalletError } from "./contract";
 // human-readable message via describeWalletError.
 
 async function sendAndWait(contractCallPromise) {
+  const toastId = toast.loading("Waiting for MetaMask confirmation…");
   try {
     const tx = await contractCallPromise;
+    toast.loading("Transaction submitted — confirming on the blockchain…", { id: toastId });
     const receipt = await tx.wait();
     if (receipt.status !== 1) {
       throw new Error("Transaction reverted on-chain");
     }
+    toast.dismiss(toastId);
     return receipt.hash;
   } catch (err) {
+    toast.dismiss(toastId);
     throw new Error(describeWalletError(err));
   }
 }

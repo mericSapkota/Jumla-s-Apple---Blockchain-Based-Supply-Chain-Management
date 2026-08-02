@@ -41,12 +41,28 @@ public class FileStorageService {
     @Value("${app.upload.url-prefix:/uploads/profiles}")
     private String urlPrefix;
 
+    @Value("${app.upload.blog-url-prefix:/uploads/blogs}")
+    private String blogUrlPrefix;
+
     public String storeProfilePicture(MultipartFile file) {
+        return store(file, "profiles", urlPrefix, "Profile picture");
+    }
+
+    /**
+     * Stores a blog cover image (same rules as profile pictures) under
+     * {frontend-public-dir}/uploads/blogs/{uuid}.{ext} and returns the relative
+     * path saved in the DB, e.g. /uploads/blogs/{uuid}.png.
+     */
+    public String storeBlogImage(MultipartFile file) {
+        return store(file, "blogs", blogUrlPrefix, "Blog cover image");
+    }
+
+    private String store(MultipartFile file, String subDir, String returnedPrefix, String label) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("Profile picture file is empty");
+            throw new IllegalArgumentException(label + " file is empty");
         }
         if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-            throw new IllegalArgumentException("Profile picture must be 5MB or smaller");
+            throw new IllegalArgumentException(label + " must be 5MB or smaller");
         }
 
         String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "";
@@ -58,20 +74,36 @@ public class FileStorageService {
         }
 
         try {
-            Path targetDir = Paths.get(frontendPublicDir, "uploads", "profiles");
+            Path targetDir = Paths.get(frontendPublicDir, "uploads", subDir);
             Files.createDirectories(targetDir);
 
             String filename = UUID.randomUUID() + "." + extension;
             Path targetFile = targetDir.resolve(filename);
 
             Files.copy(file.getInputStream(), targetFile, StandardCopyOption.REPLACE_EXISTING);
-            log.info("Stored profile picture at {}", targetFile);
+            log.info("Stored {} at {}", label.toLowerCase(), targetFile);
 
             // This relative path (NOT the absolute disk path) is what gets saved in the DB.
-            return urlPrefix + "/" + filename;
+            return returnedPrefix + "/" + filename;
         } catch (IOException e) {
-            log.error("Failed to store profile picture: {}", e.getMessage());
-            throw new RuntimeException("Could not save profile picture: " + e.getMessage());
+            log.error("Failed to store {}: {}", label.toLowerCase(), e.getMessage());
+            throw new RuntimeException("Could not save " + label.toLowerCase() + ": " + e.getMessage());
+        }
+    }
+
+    /** Deletes a previously stored blog cover image, given the relative path saved in the DB. */
+    public void deleteBlogImage(String relativePath) {
+        deleteRelative(relativePath, "blogs");
+    }
+
+    private void deleteRelative(String relativePath, String subDir) {
+        if (relativePath == null || relativePath.isBlank()) return;
+        try {
+            String filename = relativePath.substring(relativePath.lastIndexOf('/') + 1);
+            Path target = Paths.get(frontendPublicDir, "uploads", subDir, filename);
+            Files.deleteIfExists(target);
+        } catch (IOException e) {
+            log.warn("Could not delete old file {}: {}", relativePath, e.getMessage());
         }
     }
 

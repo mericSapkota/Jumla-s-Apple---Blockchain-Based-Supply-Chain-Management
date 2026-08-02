@@ -10,9 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.web3j.crypto.Keys;
 import org.web3j.crypto.Sign;
-import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
+import org.web3j.tx.TransactionManager;
 import org.web3j.tx.gas.ContractGasProvider;
 import org.web3j.utils.Numeric;
 
@@ -31,7 +31,9 @@ public class WalletService {
 
     private final UserRepository userRepository;
     private final Web3j web3j;
-    private final Credentials ownerCredentials; // deployer/owner key — used ONLY for assignRole
+    // Signs assignRole with the deployer/owner key AND the configured chain id
+    // (EIP-155), so the transaction is accepted by public RPCs like Sepolia's.
+    private final TransactionManager txManager;
     private final ContractGasProvider gasProvider;
 
     @Value("${web3j.contract-address}")
@@ -79,7 +81,7 @@ public class WalletService {
         //    action from here on is signed by the user's own wallet.
         BigInteger onChainRole = BigInteger.valueOf(roleToContractValue(user.getRole()));
         try {
-            AppleBatch contract = AppleBatch.load(contractAddress, web3j, ownerCredentials, gasProvider);
+            AppleBatch contract = AppleBatch.load(contractAddress, web3j, txManager, gasProvider);
             TransactionReceipt receipt = contract.assignRole(claimedAddress, onChainRole).send();
             log.info("Assigned role {} to wallet {} for user {}. TxHash: {}",
                     user.getRole(), claimedAddress, userEmail, receipt.getTransactionHash());
@@ -115,7 +117,7 @@ public class WalletService {
         }
         BigInteger onChainRole = BigInteger.valueOf(roleToContractValue(user.getRole()));
         try {
-            AppleBatch contract = AppleBatch.load(contractAddress, web3j, ownerCredentials, gasProvider);
+            AppleBatch contract = AppleBatch.load(contractAddress, web3j, txManager, gasProvider);
             TransactionReceipt receipt = contract.assignRole(user.getWalletAddress(), onChainRole).send();
             return WalletLinkResponse.builder()
                     .walletAddress(user.getWalletAddress())
@@ -128,10 +130,28 @@ public class WalletService {
         }
     }
 
+    /**
+     * Unlinks the wallet from the account so a different MetaMask account can be
+     * linked. Only clears the off-chain association in our DB — the on-chain role
+     * already assigned to the old wallet address is left as-is (it's harmless once
+     * the address is no longer tied to this account, and re-linking a new wallet
+     * assigns that wallet its own role).
+     */
+    @Transactional
+    public void unlinkWallet(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getWalletAddress() == null) {
+            throw new RuntimeException("No wallet linked");
+        }
+        user.setWalletAddress(null);
+        userRepository.save(user);
+    }
+
     /** Reads the on-chain role currently assigned to a wallet (0=NONE..4=CONSUMER). */
     public BigInteger getOnChainRole(String walletAddress) {
         try {
-            AppleBatch contract = AppleBatch.load(contractAddress, web3j, ownerCredentials, gasProvider);
+            AppleBatch contract = AppleBatch.load(contractAddress, web3j, txManager, gasProvider);
             return contract.roles(walletAddress).send();
         } catch (Exception e) {
             log.warn("Could not read on-chain role for {}: {}", walletAddress, e.getMessage());
