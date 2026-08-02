@@ -4,6 +4,8 @@ import axiosClient from "./axiosClient";
 export const getChatEnabled = () =>
   axiosClient.get("/api/chat/enabled").then((res) => res.data);
 
+// Returns the assistant reply object when AI is on, or { status: "pending" }
+// (HTTP 202) when AI is off and a human admin will answer instead.
 export const sendChatMessage = (sessionId, message) =>
   axiosClient.post("/api/chat", { sessionId, message }).then((res) => res.data);
 
@@ -22,3 +24,9 @@ export const fetchChatSettings = () =>
 
 export const updateChatSettings = (enabled) =>
   axiosClient.put("/api/admin/chat/settings", { enabled }).then((res) => res.data);
+
+// Human admin reply into a conversation (used when the AI is toggled off).
+export const replyToConversation = (sessionId, message) =>
+  axiosClient
+    .post(`/api/admin/chat/conversations/${sessionId}/reply`, { message })
+    .then((res) => res.data);

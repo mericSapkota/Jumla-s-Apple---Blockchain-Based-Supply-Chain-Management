@@ -135,6 +135,36 @@ export default function ConsumerScanPage() {
 
         {batch && (
           <>
+            {batch.photoPath && (
+              <section className="bg-surface-container-lowest rounded-3xl shadow-soft overflow-hidden">
+                <img
+                  src={batch.photoPath}
+                  alt={`Apple from batch ${batch.batchId}`}
+                  className="w-full h-56 object-cover"
+                />
+                <div className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                      Verified at harvest
+                    </p>
+                    <p className="text-sm font-bold text-on-surface">{batch.appleVariety} apples</p>
+                  </div>
+                  {batch.aiResult && batch.aiResult !== "PENDING" && (
+                    <span
+                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wide ${
+                        batch.aiResult === "FRESH"
+                          ? "bg-tertiary-fixed text-on-tertiary-fixed"
+                          : "bg-error-container text-on-error-container"
+                      }`}
+                    >
+                      <Icon name="verified" filled size="14px" />
+                      AI checked: {batch.aiResult}
+                    </span>
+                  )}
+                </div>
+              </section>
+            )}
+
             <section className="space-y-6">
               <div className="flex items-center justify-between px-2">
                 <h3 className="font-headline text-2xl font-bold text-primary">Harvest journey</h3>

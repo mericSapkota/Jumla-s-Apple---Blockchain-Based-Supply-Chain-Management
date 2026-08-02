@@ -13,6 +13,16 @@ export const getNextBatchId = () =>
 export const createBatch = (payload) =>
   axiosClient.post("/api/batch/create", payload).then((res) => res.data);
 
+// Uploads the AI-verified apple photo and returns its stored relative path
+// (e.g. "/uploads/batches/<uuid>.jpg"), which is then passed to createBatch.
+export const uploadBatchPhoto = (file) => {
+  const formData = new FormData();
+  formData.append("photo", file);
+  return axiosClient
+    .post("/api/batch/photo", formData, { headers: { "Content-Type": "multipart/form-data" } })
+    .then((res) => res.data.path);
+};
+
 export const certifyBatch = (batchId, payload) =>
   axiosClient.put(`/api/batch/certify/${batchId}`, payload).then((res) => res.data);
 

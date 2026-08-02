@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { checkAppleFreshness } from "../../api/aiApi";
+import { uploadBatchPhoto } from "../../api/batchApi";
 import Icon from "../ui/Icon";
 import toast from "react-hot-toast";
 
@@ -32,7 +33,18 @@ export default function AIFreshnessCheck({ onResult }) {
       const { raw, result: aiResult, confidence } = await checkAppleFreshness(file);
       setResult(aiResult);
       setAiConfidence(confidence);
-      onResult?.(aiResult);
+
+      // Persist the verified photo so the cooperative and consumers can see the
+      // exact apple that was checked. If the upload fails we still let the
+      // freshness result through — the photo is a nice-to-have, not a blocker.
+      let photoPath = "";
+      try {
+        photoPath = await uploadBatchPhoto(file);
+      } catch (uploadErr) {
+        console.warn("Apple photo upload failed:", uploadErr);
+      }
+
+      onResult?.(aiResult, photoPath);
       console.log("confidence", confidence);
       if (aiResult === "ROTTEN") {
         toast.error("The apple appears to be rotten. Please discard it.");

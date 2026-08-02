@@ -23,7 +23,7 @@ export default function Button({
       {...rest}
     >
       {loading ? (
-        <span className="material-symbols-outlined  text-base">progress_activity</span>
+        <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
       ) : (
         icon && <span className="material-symbols-outlined text-base">{icon}</span>
       )}

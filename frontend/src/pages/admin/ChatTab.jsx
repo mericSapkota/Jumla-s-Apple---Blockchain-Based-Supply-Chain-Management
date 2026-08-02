@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Icon from "../../components/ui/Icon";
 import { formatDate } from "../../utils/formatDate";
@@ -7,7 +7,10 @@ import {
   fetchConversation,
   fetchChatSettings,
   updateChatSettings,
+  replyToConversation,
 } from "../../api/chatApi";
+
+const ROLE_LABELS = { user: "Visitor", assistant: "Assistant (AI)", admin: "You" };
 
 export default function ChatTab() {
   const [settings, setSettings] = useState(null); // { enabled, aiConfigured }
@@ -15,6 +18,9 @@ export default function ChatTab() {
   const [selected, setSelected] = useState(null); // sessionId
   const [thread, setThread] = useState(null);
   const [toggling, setToggling] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [replying, setReplying] = useState(false);
+  const selectedRef = useRef(null);
 
   const loadConversations = useCallback(() => {
     fetchConversations()
@@ -31,10 +37,40 @@ export default function ChatTab() {
 
   const openConversation = (sessionId) => {
     setSelected(sessionId);
+    selectedRef.current = sessionId;
     setThread(null);
+    setReplyText("");
     fetchConversation(sessionId)
       .then(setThread)
       .catch(() => toast.error("Could not load this conversation"));
+  };
+
+  // Poll the open conversation so new visitor messages appear while the admin
+  // is answering (mirrors the visitor widget's polling).
+  useEffect(() => {
+    if (!selected) return;
+    const id = setInterval(() => {
+      if (replying) return;
+      fetchConversation(selected).then(setThread).catch(() => {});
+    }, 4000);
+    return () => clearInterval(id);
+  }, [selected, replying]);
+
+  const handleReply = async (e) => {
+    e.preventDefault();
+    const text = replyText.trim();
+    if (!text || replying || !selected) return;
+    setReplying(true);
+    try {
+      const saved = await replyToConversation(selected, text);
+      setThread((prev) => [...(prev || []), saved]);
+      setReplyText("");
+      loadConversations(); // refresh the list preview/timestamp
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Could not send reply");
+    } finally {
+      setReplying(false);
+    }
   };
 
   const handleToggle = async () => {
@@ -124,37 +160,68 @@ export default function ChatTab() {
           )}
         </div>
 
-        {/* Transcript */}
-        <div className="bg-surface-container-lowest rounded-3xl shadow-card p-5 h-[65vh] overflow-y-auto">
+        {/* Transcript + reply composer */}
+        <div className="bg-surface-container-lowest rounded-3xl shadow-card h-[65vh] flex flex-col overflow-hidden">
           {!selected ? (
-            <div className="h-full flex flex-col items-center justify-center text-on-surface-variant gap-2">
+            <div className="flex-1 flex flex-col items-center justify-center text-on-surface-variant gap-2">
               <Icon name="forum" className="text-5xl" />
               <p className="text-sm">Select a conversation to read the transcript.</p>
             </div>
           ) : thread === null ? (
-            <p className="text-on-surface-variant text-sm">Loading…</p>
+            <p className="text-on-surface-variant text-sm p-5">Loading…</p>
           ) : (
-            <div className="space-y-3">
-              {thread.map((m) => (
-                <div
-                  key={m.id}
-                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                >
+            <>
+              <div className="flex-1 overflow-y-auto p-5 space-y-3">
+                {thread.map((m) => (
                   <div
-                    className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words ${
-                      m.role === "user"
-                        ? "bg-primary text-on-primary rounded-br-sm"
-                        : "bg-surface-container-high text-on-surface rounded-bl-sm"
-                    }`}
+                    key={m.id}
+                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
-                    <p className="text-[10px] font-bold uppercase tracking-wide opacity-70 mb-0.5">
-                      {m.role === "user" ? "Visitor" : "Assistant"}
-                    </p>
-                    {m.content}
+                    <div
+                      className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words ${
+                        m.role === "user"
+                          ? "bg-primary text-on-primary rounded-br-sm"
+                          : m.role === "admin"
+                          ? "bg-secondary-container text-on-secondary-container rounded-bl-sm"
+                          : "bg-surface-container-high text-on-surface rounded-bl-sm"
+                      }`}
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-wide opacity-70 mb-0.5">
+                        {ROLE_LABELS[m.role] || m.role}
+                      </p>
+                      {m.content}
+                    </div>
                   </div>
+                ))}
+              </div>
+
+              {/* Reply composer — only when the AI is turned off */}
+              {settings && !settings.enabled ? (
+                <form
+                  onSubmit={handleReply}
+                  className="p-3 border-t border-outline-variant/20 flex items-center gap-2"
+                >
+                  <input
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder="Type your reply…"
+                    className="flex-1 bg-surface-container-low border-none rounded-full px-4 py-2.5 text-sm text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary-fixed outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={replying || !replyText.trim()}
+                    aria-label="Send reply"
+                    className="w-10 h-10 shrink-0 rounded-full bg-primary text-on-primary flex items-center justify-center disabled:opacity-40"
+                  >
+                    <Icon name="send" size="20px" />
+                  </button>
+                </form>
+              ) : (
+                <div className="p-3 border-t border-outline-variant/20 text-center text-[11px] text-on-surface-variant">
+                  Turn off the AI assistant (toggle above) to reply to this visitor yourself.
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>

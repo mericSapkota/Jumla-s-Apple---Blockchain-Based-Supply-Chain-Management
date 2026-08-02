@@ -107,7 +107,12 @@ export default function FarmerDashboard() {
               {...register("farmLocation")}
             />
 
-            <AIFreshnessCheck onResult={(result) => setValue("aiResult", result)} />
+            <AIFreshnessCheck
+              onResult={(result, photoPath) => {
+                setValue("aiResult", result);
+                setValue("photoPath", photoPath || "");
+              }}
+            />
 
             <Button type="submit" loading={isSubmitting} icon="hub" className="w-full py-4">
               Register batch on blockchain

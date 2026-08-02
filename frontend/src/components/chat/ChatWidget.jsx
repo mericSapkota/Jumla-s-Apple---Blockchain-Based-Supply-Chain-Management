@@ -25,22 +25,34 @@ export default function ChatWidget() {
   const sessionId = useRef(getOrCreateSessionId());
   const scrollRef = useRef(null);
 
-  // Only render the widget if the admin has the AI assistant turned on.
+  const sendingRef = useRef(false);
+
+  // Whether AI auto-reply is on (used only for header copy — the widget is
+  // always available so a human admin can reply when AI is off).
   useEffect(() => {
     getChatEnabled()
       .then((data) => setEnabled(Boolean(data?.enabled)))
-      .catch(() => setEnabled(false));
+      .catch(() => {});
   }, []);
 
-  // Load any prior transcript the first time the panel is opened.
-  useEffect(() => {
-    if (!open || messages.length > 0) return;
+  const refreshHistory = () =>
     getChatHistory(sessionId.current)
       .then((history) =>
         setMessages(history.map((m) => ({ role: m.role, content: m.content })))
       )
       .catch(() => {});
-  }, [open, messages.length]);
+
+  // Load transcript when opened, then poll so admin replies (and AI replies)
+  // show up in near-real-time. Polling pauses mid-send to avoid dropping the
+  // optimistic user bubble before the server has stored it.
+  useEffect(() => {
+    if (!open) return;
+    refreshHistory();
+    const id = setInterval(() => {
+      if (!sendingRef.current) refreshHistory();
+    }, 4000);
+    return () => clearInterval(id);
+  }, [open]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -54,9 +66,14 @@ export default function ChatWidget() {
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     setInput("");
     setSending(true);
+    sendingRef.current = true;
     try {
       const reply = await sendChatMessage(sessionId.current, text);
-      setMessages((prev) => [...prev, { role: "assistant", content: reply.content }]);
+      // AI on → reply has content; AI off → { status: "pending" }, so we leave
+      // the thread waiting and the poll will surface the admin's manual reply.
+      if (reply?.content) {
+        setMessages((prev) => [...prev, { role: "assistant", content: reply.content }]);
+      }
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -64,10 +81,13 @@ export default function ChatWidget() {
       setMessages((prev) => [...prev, { role: "assistant", content: msg }]);
     } finally {
       setSending(false);
+      sendingRef.current = false;
     }
   };
 
-  if (!enabled) return null;
+  // No reply yet (AI off and admin hasn't answered) → show a gentle waiting note.
+  const waitingForReply =
+    !sending && messages.length > 0 && messages[messages.length - 1].role === "user";
 
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">
@@ -79,7 +99,9 @@ export default function ChatWidget() {
               <Icon name="support_agent" />
               <div>
                 <p className="font-bold leading-tight">Jumla Trace Assistant</p>
-                <p className="text-[11px] opacity-80">Ask about tracing, batches & more</p>
+                <p className="text-[11px] opacity-80">
+                  {enabled ? "Ask about tracing, batches & more" : "Our team will reply here"}
+                </p>
               </div>
             </div>
             <button onClick={() => setOpen(false)} aria-label="Close chat" className="hover:opacity-80">
@@ -120,6 +142,11 @@ export default function ChatWidget() {
                   </span>
                 </div>
               </div>
+            )}
+            {waitingForReply && (
+              <p className="text-center text-[11px] text-on-surface-variant italic px-4">
+                A team member will reply shortly…
+              </p>
             )}
           </div>
 

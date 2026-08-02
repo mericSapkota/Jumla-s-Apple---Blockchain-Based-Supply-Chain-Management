@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "react-router-dom";
@@ -12,6 +12,7 @@ import { transitUpdateSchema } from "../../schemas/batchSchemas";
 import { getBatchesByStatus, updateTransit, deliverBatch } from "../../api/batchApi";
 import { updateTransitOnChain, deliverBatchOnChain } from "../../blockchain/batchContract";
 import CertificateBanner from "../../components/certificate/CertificateBanner";
+import { BATCH_SORT_OPTIONS, sortBatches } from "../../utils/batchSort";
 
 function TransitForm({ batch, onUpdated }) {
   const {
@@ -63,6 +64,9 @@ export default function TransporterDashboard() {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deliveringId, setDeliveringId] = useState(null);
+  const [sortBy, setSortBy] = useState("recent");
+
+  const sortedBatches = useMemo(() => sortBatches(batches, sortBy), [batches, sortBy]);
 
   const load = async () => {
     setLoading(true);
@@ -117,7 +121,25 @@ export default function TransporterDashboard() {
         </div>
       ) : (
         <div className="space-y-4">
-          {batches.map((batch) => (
+          <div className="flex items-center justify-end gap-2">
+            <label htmlFor="transit-sort" className="text-xs font-medium text-on-surface-variant flex items-center gap-1">
+              <Icon name="sort" size="16px" />
+              Sort by
+            </label>
+            <select
+              id="transit-sort"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-surface-container-lowest border border-outline-variant/30 rounded-full px-3 py-1.5 text-xs font-medium text-on-surface focus:ring-2 focus:ring-primary-fixed outline-none"
+            >
+              {BATCH_SORT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {sortedBatches.map((batch) => (
             <div
               key={batch.batchId}
               className="bg-surface-container-lowest rounded-xl p-5 shadow-soft border border-outline-variant/5 space-y-4"
