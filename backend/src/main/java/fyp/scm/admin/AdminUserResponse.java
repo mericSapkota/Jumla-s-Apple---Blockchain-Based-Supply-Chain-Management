@@ -19,5 +19,6 @@ public class AdminUserResponse {
     private String profilePicturePath;
     private String walletAddress;
     private boolean emailVerified;
+    private String approvalStatus; // PENDING | APPROVED | REJECTED
     private Instant createdAt;
 }

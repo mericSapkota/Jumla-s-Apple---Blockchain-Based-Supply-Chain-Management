@@ -43,6 +43,38 @@ public class MailService {
         }
     }
 
+    /**
+     * Sent to Google-authenticated cooperative/transporter accounts once an
+     * admin approves them — they don't need email verification, so this just
+     * tells them they can now sign in.
+     */
+    public void sendApprovalEmail(String to, String fullName, String loginLink) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject("Your Jumla Trace account has been approved");
+            helper.setText("""
+                    <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+                        <h2>Good news, %s!</h2>
+                        <p>An administrator has approved your Jumla Trace account. You can now sign in.</p>
+                        <p>
+                            <a href="%s" style="display:inline-block; padding:12px 24px; background:#2e7d32;
+                               color:#fff; text-decoration:none; border-radius:8px;">
+                                Sign in
+                            </a>
+                        </p>
+                        <p>Or paste this link into your browser:<br>%s</p>
+                    </div>
+                    """.formatted(fullName, loginLink, loginLink), true);
+
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Failed to send approval email to {}", to, e);
+        }
+    }
+
     public void sendTwoFactorCode(String to, String fullName, String code) {
         try {
             MimeMessage message = mailSender.createMimeMessage();

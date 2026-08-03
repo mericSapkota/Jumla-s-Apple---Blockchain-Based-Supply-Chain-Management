@@ -3,6 +3,7 @@ package fyp.scm.auth;
 import fyp.scm.mail.MailService;
 import fyp.scm.security.JwtUtil;
 import fyp.scm.storage.FileStorageService;
+import fyp.scm.user.ApprovalStatus;
 import fyp.scm.user.User;
 import fyp.scm.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +54,12 @@ public class AuthService {
             profilePicturePath = fileStorageService.storeProfilePicture(profilePicture);
         }
 
-        User user = User.builder()
+        // Cooperative/transporter accounts must be approved by an admin before
+        // they are usable. For those we hold back the verification token+email
+        // until approval; farmers/consumers get their email right away.
+        boolean needsApproval = User.roleNeedsApproval(req.getRole());
+
+        User.UserBuilder builder = User.builder()
                 .email(req.getEmail())
                 .password(passwordEncoder.encode(req.getPassword()))
                 .fullName(req.getFullName())
@@ -61,10 +67,25 @@ public class AuthService {
                 .dateOfBirth(req.getDateOfBirth())
                 .profilePicturePath(profilePicturePath)
                 .emailVerified(false)
-                .verificationToken(UUID.randomUUID().toString())
-                .verificationTokenExpiry(Instant.now().plus(verificationTokenExpiryHours, ChronoUnit.HOURS))
-                .build();
+                .approvalStatus(needsApproval ? ApprovalStatus.PENDING : ApprovalStatus.APPROVED);
+
+        if (!needsApproval) {
+            builder.verificationToken(UUID.randomUUID().toString())
+                    .verificationTokenExpiry(Instant.now().plus(verificationTokenExpiryHours, ChronoUnit.HOURS));
+        }
+
+        User user = builder.build();
         userRepository.save(user);
+
+        if (needsApproval) {
+            // No verification email yet — it is sent once an admin approves.
+            return AuthResponse.builder()
+                    .role(user.getRole().name())
+                    .fullName(user.getFullName())
+                    .message("Registration received. An administrator will review your request, "
+                            + "and you'll get a verification email once your account is approved.")
+                    .build();
+        }
 
         sendVerificationEmail(user);
 
@@ -86,7 +107,15 @@ public class AuthService {
             throw new RuntimeException("Invalid password");
         }
 
-        // Step 3 — block unverified accounts
+        // Step 3 — block accounts still awaiting (or denied) admin approval
+        if (user.isPendingApproval()) {
+            throw new RuntimeException("Your account is pending administrator approval.");
+        }
+        if (user.isRejected()) {
+            throw new RuntimeException("Your registration request was not approved.");
+        }
+
+        // Step 4 — block unverified accounts
         if (!user.isEmailVerified()) {
             throw new RuntimeException("Please verify your email before logging in.");
         }
@@ -142,6 +171,13 @@ public class AuthService {
 
         User existing = userRepository.findByEmail(googleUser.email()).orElse(null);
         if (existing != null) {
+            // A coop/transporter still awaiting (or denied) approval cannot log in.
+            if (existing.isPendingApproval()) {
+                throw new RuntimeException("Your account is pending administrator approval.");
+            }
+            if (existing.isRejected()) {
+                throw new RuntimeException("Your registration request was not approved.");
+            }
             // Google has proven ownership of this mailbox — treat as verified.
             if (!existing.isEmailVerified()) {
                 existing.setEmailVerified(true);
@@ -165,6 +201,8 @@ public class AuthService {
             throw new RuntimeException("This role cannot be self-registered");
         }
 
+        boolean needsApproval = User.roleNeedsApproval(req.getRole());
+
         User user = User.builder()
                 .email(googleUser.email())
                 // Random password: Google accounts authenticate via Google only.
@@ -174,8 +212,19 @@ public class AuthService {
                 .dateOfBirth(req.getDateOfBirth())
                 .emailVerified(true)
                 .authProvider("GOOGLE")
+                .approvalStatus(needsApproval ? ApprovalStatus.PENDING : ApprovalStatus.APPROVED)
                 .build();
         userRepository.save(user);
+
+        // Coop/transporter accounts can't log in until an admin approves them,
+        // so we don't hand back a token yet.
+        if (needsApproval) {
+            return AuthResponse.builder()
+                    .role(user.getRole().name())
+                    .fullName(user.getFullName())
+                    .message("Account created. An administrator will review your request before you can sign in.")
+                    .build();
+        }
         return tokenResponse(user);
     }
 
@@ -214,6 +263,13 @@ public class AuthService {
 
         if (user.isEmailVerified()) {
             throw new RuntimeException("This account is already verified.");
+        }
+        if (user.isPendingApproval()) {
+            throw new RuntimeException("Your account is awaiting administrator approval. "
+                    + "You'll receive a verification email once it is approved.");
+        }
+        if (user.isRejected()) {
+            throw new RuntimeException("Your registration request was not approved.");
         }
 
         user.setVerificationToken(UUID.randomUUID().toString());

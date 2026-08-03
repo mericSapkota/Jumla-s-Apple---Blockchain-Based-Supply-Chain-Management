@@ -62,6 +62,31 @@ public class User implements UserDetails {
 
     private Instant verificationTokenExpiry;
 
+    // Admin approval gate for cooperative/transporter accounts. Nullable so
+    // legacy rows (created before this column) load fine — a null value is
+    // treated as APPROVED by the helpers below. New coop/transporter signups
+    // are set to PENDING; everyone else is APPROVED at registration.
+    @Enumerated(EnumType.STRING)
+    private ApprovalStatus approvalStatus;
+
+    /** True unless the account is explicitly awaiting approval or was rejected. */
+    public boolean isApproved() {
+        return approvalStatus == null || approvalStatus == ApprovalStatus.APPROVED;
+    }
+
+    public boolean isPendingApproval() {
+        return approvalStatus == ApprovalStatus.PENDING;
+    }
+
+    public boolean isRejected() {
+        return approvalStatus == ApprovalStatus.REJECTED;
+    }
+
+    /** Roles whose registration must be approved by an admin before use. */
+    public static boolean roleNeedsApproval(Role role) {
+        return role == Role.COOPERATIVE || role == Role.TRANSPORTER;
+    }
+
     // Nullable for accounts created before this column existed.
     @Builder.Default
     private Instant createdAt = Instant.now();

@@ -7,20 +7,25 @@ import fyp.scm.blog.BlogPost;
 import fyp.scm.blog.BlogRepository;
 import fyp.scm.donation.Donation;
 import fyp.scm.donation.DonationRepository;
+import fyp.scm.mail.MailService;
+import fyp.scm.user.ApprovalStatus;
 import fyp.scm.user.Role;
 import fyp.scm.user.User;
 import fyp.scm.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +35,13 @@ public class AdminService {
     private final BatchRepository batchRepository;
     private final BlogRepository blogRepository;
     private final DonationRepository donationRepository;
+    private final MailService mailService;
+
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
+
+    @Value("${app.verification.token-expiry-hours}")
+    private long verificationTokenExpiryHours;
 
     // ── analytics ─────────────────────────────────
 
@@ -122,6 +134,49 @@ public class AdminService {
         return toResponse(user);
     }
 
+    // ── approvals (cooperative / transporter) ─────
+
+    /**
+     * Approves a pending account. For email/password accounts this is the point
+     * at which the verification email is finally sent; Google accounts are
+     * already email-verified, so they just get a short "you're approved" note.
+     */
+    @Transactional
+    public AdminUserResponse approveUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        boolean wasNotApproved = !user.isApproved();
+        user.setApprovalStatus(ApprovalStatus.APPROVED);
+
+        if (wasNotApproved) {
+            if ("GOOGLE".equals(user.getAuthProvider())) {
+                user.setEmailVerified(true);
+                userRepository.save(user);
+                mailService.sendApprovalEmail(user.getEmail(), user.getFullName(), frontendUrl + "/login");
+            } else if (!user.isEmailVerified()) {
+                // Now issue the verification token and finally send the email.
+                user.setVerificationToken(UUID.randomUUID().toString());
+                user.setVerificationTokenExpiry(Instant.now().plus(verificationTokenExpiryHours, ChronoUnit.HOURS));
+                userRepository.save(user);
+                String link = frontendUrl + "/verify-email?token=" + user.getVerificationToken();
+                mailService.sendVerificationEmail(user.getEmail(), user.getFullName(), link);
+            } else {
+                userRepository.save(user);
+            }
+        }
+        return toResponse(user);
+    }
+
+    @Transactional
+    public AdminUserResponse rejectUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setApprovalStatus(ApprovalStatus.REJECTED);
+        userRepository.save(user);
+        return toResponse(user);
+    }
+
     private AdminUserResponse toResponse(User user) {
         return AdminUserResponse.builder()
                 .id(user.getId())
@@ -132,6 +187,9 @@ public class AdminService {
                 .profilePicturePath(user.getProfilePicturePath())
                 .walletAddress(user.getWalletAddress())
                 .emailVerified(user.isEmailVerified())
+                .approvalStatus(user.getApprovalStatus() == null
+                        ? ApprovalStatus.APPROVED.name()
+                        : user.getApprovalStatus().name())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

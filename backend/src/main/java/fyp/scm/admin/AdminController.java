@@ -45,6 +45,19 @@ public class AdminController {
         return ResponseEntity.ok(adminService.verifyUser(id));
     }
 
+    // Approve a pending cooperative/transporter registration. Triggers the
+    // verification email (email/password accounts) or an approval notice
+    // (Google accounts).
+    @PutMapping("/users/{id}/approve")
+    public ResponseEntity<AdminUserResponse> approveUser(@PathVariable Long id) {
+        return ResponseEntity.ok(adminService.approveUser(id));
+    }
+
+    @PutMapping("/users/{id}/reject")
+    public ResponseEntity<AdminUserResponse> rejectUser(@PathVariable Long id) {
+        return ResponseEntity.ok(adminService.rejectUser(id));
+    }
+
     @GetMapping("/batches")
     public ResponseEntity<List<BatchEntity>> batches() {
         return ResponseEntity.ok(adminService.listBatches());
