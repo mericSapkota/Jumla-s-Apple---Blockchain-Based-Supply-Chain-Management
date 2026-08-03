@@ -25,7 +25,14 @@ export default function BlogListPage() {
       <main className="pt-24 px-4 sm:px-6 pb-12 max-w-5xl mx-auto space-y-8">
         <section className="flex items-end justify-between flex-wrap gap-4">
           <div className="space-y-1">
+            <button
+              onClick={() => window.history.back()}
+              className="text-sm font-bold block text-primary hover:underline"
+            >
+              <span class="material-symbols-outlined">arrow_back</span>Go back
+            </button>
             <div className="flex items-center gap-2">
+              <br></br>
               <span className="w-2 h-2 rounded-full bg-role-accent" />
               <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
                 Stories from the orchard

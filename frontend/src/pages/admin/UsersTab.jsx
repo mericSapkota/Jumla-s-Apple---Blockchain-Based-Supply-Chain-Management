@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { fetchUsers, deleteUser, verifyUser } from "../../api/adminApi";
+import { fetchUsers, deleteUser, verifyUser, approveUser, rejectUser } from "../../api/adminApi";
 import AdminTable from "./AdminTable";
 import { formatDate } from "../../utils/formatDate";
 import Input from "../../components/ui/Input";
@@ -31,22 +31,55 @@ export default function UsersTab() {
 
   const handleVerify = async (user) => {
     try {
+      setLoading(true);
       await verifyUser(user.id);
       toast.success(`${user.fullName} marked as verified`);
       load();
     } catch (err) {
       toast.error(err?.response?.data?.message || "Could not verify user");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async (user) => {
+    try {
+      setLoading(true);
+      await approveUser(user.id);
+      toast.success(`${user.fullName} approved, verification email sent`);
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Could not approve user");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReject = async (user) => {
+    if (!window.confirm(`Reject ${user.fullName}'s registration request?`)) return;
+    try {
+      setLoading(true);
+      await rejectUser(user.id);
+      toast.success(`${user.fullName}'s request rejected`);
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Could not reject user");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDelete = async (user) => {
     if (!window.confirm(`Delete ${user.fullName} (${user.email})? This cannot be undone.`)) return;
     try {
+      setLoading(true);
       await deleteUser(user.id);
       toast.success("User deleted");
       load();
     } catch (err) {
       toast.error(err?.response?.data?.message || "Could not delete user");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -82,6 +115,27 @@ export default function UsersTab() {
           <span className="text-xs text-on-surface-variant">No</span>
         ),
     },
+    {
+      key: "approvalStatus",
+      label: "Approval",
+      render: (u) => {
+        const status = u.approvalStatus || "APPROVED";
+        const styles = {
+          PENDING: "bg-secondary-fixed text-on-secondary-fixed",
+          APPROVED: "bg-tertiary-fixed text-on-tertiary-fixed",
+          REJECTED: "bg-error-container text-on-error-container",
+        };
+        return (
+          <span
+            className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+              styles[status] || "bg-surface-container-high text-on-surface-variant"
+            }`}
+          >
+            {status}
+          </span>
+        );
+      },
+    },
     { key: "createdAt", label: "Joined", render: (u) => formatDate(u.createdAt) },
     {
       key: "actions",
@@ -89,17 +143,33 @@ export default function UsersTab() {
       render: (u) =>
         u.role !== "SUPERADMIN" && (
           <div className="flex items-center gap-3 justify-end">
-            {!u.emailVerified && (
-              <button
-                onClick={() => handleVerify(u)}
-                className="text-xs font-bold text-primary hover:underline whitespace-nowrap"
-              >
-                Verify
-              </button>
+            {u.approvalStatus === "PENDING" ? (
+              <>
+                <button
+                  onClick={() => handleApprove(u)}
+                  className="text-xs font-bold text-primary hover:underline whitespace-nowrap"
+                >
+                  Approve
+                </button>
+                <button onClick={() => handleReject(u)} className="text-xs font-bold text-error hover:underline">
+                  Reject
+                </button>
+              </>
+            ) : (
+              <>
+                {!u.emailVerified && (
+                  <button
+                    onClick={() => handleVerify(u)}
+                    className="text-xs font-bold text-primary hover:underline whitespace-nowrap"
+                  >
+                    Verify
+                  </button>
+                )}
+                <button onClick={() => handleDelete(u)} className="text-xs font-bold text-error hover:underline">
+                  Delete
+                </button>
+              </>
             )}
-            <button onClick={() => handleDelete(u)} className="text-xs font-bold text-error hover:underline">
-              Delete
-            </button>
           </div>
         ),
     },
@@ -127,7 +197,7 @@ export default function UsersTab() {
       </div>
 
       {loading ? (
-        <p className="text-on-surface-variant">Loading users…</p>
+        <p className="text-on-surface-variant">Loading </p>
       ) : (
         <AdminTable columns={columns} rows={users} emptyMessage="No users match this filter." />
       )}

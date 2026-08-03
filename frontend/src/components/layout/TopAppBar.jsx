@@ -23,9 +23,13 @@ export default function TopAppBar({ title = "Jumla Trace" }) {
   const { user, logout } = useAuth();
   const location = useLocation();
 
+  const goToLandingPage = () => {
+    window.location.href = "/";
+  };
+
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-[#fcf9f3]/95 backdrop-blur-xl shadow-card flex items-center justify-between px-4 sm:px-6 py-3 gap-3">
-      <div className="flex items-center gap-3 shrink-0">
+      <div onClick={goToLandingPage} className="flex items-center gap-3 shrink-0 cursor-pointer">
         <Logo className="h-7 w-7 md:h-9 md:w-9" />
         <h1 className="font-headline text-sm md:text-3xl font-bold tracking-tight text-primary">{title}</h1>
       </div>

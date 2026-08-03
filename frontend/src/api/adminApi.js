@@ -12,6 +12,11 @@ export const deleteUser = (id) => axiosClient.delete(`/api/admin/users/${id}`).t
 
 export const verifyUser = (id) => axiosClient.put(`/api/admin/users/${id}/verify`).then((res) => res.data);
 
+// Approve / reject a pending cooperative or transporter registration.
+export const approveUser = (id) => axiosClient.put(`/api/admin/users/${id}/approve`).then((res) => res.data);
+
+export const rejectUser = (id) => axiosClient.put(`/api/admin/users/${id}/reject`).then((res) => res.data);
+
 export const fetchAllBatches = () => axiosClient.get("/api/admin/batches").then((res) => res.data);
 
 export const fetchAllDonations = () => axiosClient.get("/api/admin/donations").then((res) => res.data);
