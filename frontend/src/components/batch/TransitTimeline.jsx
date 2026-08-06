@@ -21,6 +21,7 @@ export default function TransitTimeline({ batch }) {
       key: "HARVESTED",
       reached: true,
       date: batch.harvestDate,
+
       detail: (
         <div className="flex items-center gap-2 text-xs text-on-surface-variant">
           <span className="font-bold text-on-surface">{batch.farmerName}</span>
